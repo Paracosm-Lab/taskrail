@@ -520,6 +520,61 @@ RSpec.describe "development queue seed" do
   end
 
 
+  it "seeds the incident readiness queue with resolved prompt files" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "incident_readiness")
+    expect(queue.name).to eq("Incident Readiness Scoring")
+    expect(queue.stages).to eq(%w[
+      inventory_services
+      score_readiness
+      identify_gaps
+      draft_improvements
+      human_review
+      done
+    ])
+    expect(queue.stage_configs.pluck(:stage_name)).to contain_exactly(*queue.stages)
+    expect(queue.config).to include(
+      "default_max_retries" => 2,
+      "default_timeout_seconds" => 600,
+      "default_escalation" => "block_and_notify",
+      "max_regression_loops" => 0
+    )
+
+    inventory = queue.stage_configs.find_by!(stage_name: "inventory_services")
+    expect(inventory.adapter_type).to eq("inline_claude")
+    expect(inventory.model_override).to eq("claude-haiku-4-5-20251001")
+    expect(inventory.allowed_skills).to eq(["read_repo"])
+    expect(inventory.forbidden_skills).to include("edit_files", "deploy")
+    expect(inventory.completion_criteria).to eq(["service_inventory_produced"])
+    expect(inventory.agent_prompt).to include("# Readiness Inventory")
+    expect(inventory.agent_prompt).to include("service inventory")
+    expect(inventory.agent_prompt).not_to start_with("file://")
+    expect(inventory.adapter_config).to eq("output_artifact_kind" => "service_inventory")
+
+    score = queue.stage_configs.find_by!(stage_name: "score_readiness")
+    expect(score.model_override).to eq("claude-sonnet-4-20250514")
+    expect(score.completion_criteria).to eq(["readiness_scored"])
+    expect(score.agent_prompt).to include("# Readiness Score")
+    expect(score.adapter_config).to eq("output_artifact_kind" => "readiness_scores")
+
+    gaps = queue.stage_configs.find_by!(stage_name: "identify_gaps")
+    expect(gaps.completion_criteria).to eq(["gaps_identified"])
+    expect(gaps.agent_prompt).to include("# Readiness Gaps")
+    expect(gaps.adapter_config).to eq("output_artifact_kind" => "gap_analysis")
+
+    drafts = queue.stage_configs.find_by!(stage_name: "draft_improvements")
+    expect(drafts.completion_criteria).to eq(["improvements_drafted"])
+    expect(drafts.forbidden_skills).to eq(["deploy"])
+    expect(drafts.agent_prompt).to include("# Readiness Draft Improvements")
+    expect(drafts.adapter_config).to eq("output_artifact_kind" => "improvement_drafts")
+
+    human_review = queue.stage_configs.find_by!(stage_name: "human_review")
+    expect(human_review.adapter_type).to eq("fake")
+    expect(human_review.completion_criteria).to eq(["report_present"])
+    expect(human_review.timeout_seconds).to eq(86_400)
+  end
+
   it "is idempotent" do
     2.times { load Rails.root.join("db/seeds.rb") }
 
