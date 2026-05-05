@@ -1,3 +1,10 @@
+resolve_prompt = lambda do |prompt|
+  next prompt unless prompt.is_a?(String) && prompt.start_with?("file://")
+
+  prompt_path = prompt.delete_prefix("file://")
+  Rails.root.join(prompt_path).read
+end
+
 Rails.root.glob("config/queues/*.yml").sort.each do |queue_path|
   queue_config = YAML.load_file(queue_path)
 
@@ -16,7 +23,7 @@ Rails.root.glob("config/queues/*.yml").sort.each do |queue_path|
       max_retries: config["max_retries"],
       escalation_target: config["escalation_target"],
       completion_criteria: config.fetch("completion_criteria", []),
-      agent_prompt: config["agent_prompt"],
+      agent_prompt: resolve_prompt.call(config["agent_prompt"]),
       model_override: config["model_override"],
       timeout_seconds: config["timeout_seconds"],
       adapter_type: config.fetch("adapter_type", "fake"),

@@ -1,0 +1,107 @@
+name: Operations
+slug: operations
+stages:
+  - ingest_signals
+  - cluster_failures
+  - assess_instrumentation
+  - map_runbooks
+  - draft_runbook
+  - human_review
+  - staging_validation
+  - publish_runbook
+  - done
+config:
+  default_max_retries: 2
+  default_timeout_seconds: 300
+  default_escalation: block_and_notify
+  max_regression_loops: 2
+stage_configs:
+  ingest_signals:
+    adapter_type: inline_claude
+    model_override: claude-haiku-4-5-20251001
+    allowed_skills: [read_sentry, query_logs]
+    forbidden_skills: [deploy_prod, mutate_database, execute_staging]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: file://prompts/ops_ingest_signals.md
+    timeout_seconds: 120
+  cluster_failures:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_sentry, query_logs]
+    forbidden_skills: [deploy_prod, mutate_database, execute_staging]
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria: [clusters_created]
+    agent_prompt: file://prompts/ops_cluster_failures.md
+    timeout_seconds: 180
+  assess_instrumentation:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_sentry, read_repo]
+    forbidden_skills: [deploy_prod, mutate_database, execute_staging]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [assessment_complete]
+    agent_prompt: file://prompts/ops_assess_instrumentation.md
+    timeout_seconds: 240
+  map_runbooks:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy_prod, mutate_database, execute_staging]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [runbook_mapped]
+    agent_prompt: file://prompts/ops_map_runbooks.md
+    timeout_seconds: 180
+  draft_runbook:
+    adapter_type: inline_claude
+    model_override: claude-opus-4-20250514
+    allowed_skills: [read_repo, read_sentry, query_logs]
+    forbidden_skills: [deploy_prod, mutate_database, execute_staging]
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria: [runbook_drafted]
+    agent_prompt: file://prompts/ops_draft_runbook.md
+    timeout_seconds: 300
+  human_review:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: This stage blocks immediately for human review.
+    timeout_seconds: 86400
+  staging_validation:
+    adapter_type: docker_compose
+    allowed_skills: [execute_staging, read_repo]
+    forbidden_skills: [deploy_prod, mutate_database]
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria: [validation_passed]
+    agent_prompt: Execute the runbook against the Docker Compose staging environment. Verify each step. Report pass/fail.
+    timeout_seconds: 600
+    adapter_config:
+      compose_file: docker-compose.dev.yml
+  publish_runbook:
+    adapter_type: inline_claude
+    model_override: claude-haiku-4-5-20251001
+    allowed_skills: [write_runbook_file]
+    forbidden_skills: [deploy_prod, mutate_database, execute_staging]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Write the approved runbook YAML to the correct service docs/runbooks/ directory.
+    timeout_seconds: 120
+  done:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60

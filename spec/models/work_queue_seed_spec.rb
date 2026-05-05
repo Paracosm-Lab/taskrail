@@ -58,6 +58,44 @@ RSpec.describe "development queue seed" do
     expect(development.stage_configs.find_by!(stage_name: "build").adapter_type).to eq("fake")
   end
 
+  it "seeds the operations queue with resolved prompt files" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "operations")
+    expect(queue.stages).to eq(%w[
+      ingest_signals
+      cluster_failures
+      assess_instrumentation
+      map_runbooks
+      draft_runbook
+      human_review
+      staging_validation
+      publish_runbook
+      done
+    ])
+    expect(queue.stage_configs.pluck(:stage_name)).to contain_exactly(*queue.stages)
+    expect(queue.config).to include(
+      "default_escalation" => "block_and_notify",
+      "max_regression_loops" => 2
+    )
+
+    ingest = queue.stage_configs.find_by!(stage_name: "ingest_signals")
+    expect(ingest.adapter_type).to eq("inline_claude")
+    expect(ingest.allowed_skills).to include("read_sentry", "query_logs")
+    expect(ingest.forbidden_skills).to include("deploy_prod", "mutate_database", "execute_staging")
+    expect(ingest.agent_prompt).to include("# Ops Ingest Signals")
+    expect(ingest.agent_prompt).to include("operations ingestion agent")
+    expect(ingest.agent_prompt).not_to start_with("file://")
+
+    draft = queue.stage_configs.find_by!(stage_name: "draft_runbook")
+    expect(draft.agent_prompt).to include("# Ops Draft Runbook")
+    expect(draft.model_override).to eq("claude-opus-4-20250514")
+
+    staging_validation = queue.stage_configs.find_by!(stage_name: "staging_validation")
+    expect(staging_validation.adapter_type).to eq("docker_compose")
+    expect(staging_validation.adapter_config["compose_file"]).to eq("docker-compose.dev.yml")
+  end
+
   it "is idempotent" do
     2.times { load Rails.root.join("db/seeds.rb") }
 
