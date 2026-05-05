@@ -30,6 +30,10 @@ RSpec.describe Engine::PredicateRegistry do
     expect(described_class.resolve("runbook_selected")).to eq(Engine::Predicates::RunbookSelected)
     expect(described_class.resolve("runbook_executed")).to eq(Engine::Predicates::RunbookExecuted)
     expect(described_class.resolve("recovery_verified")).to eq(Engine::Predicates::RecoveryVerified)
+    expect(described_class.resolve("service_inventory_produced")).to eq(Engine::Predicates::ServiceInventoryProduced)
+    expect(described_class.resolve("readiness_scored")).to eq(Engine::Predicates::ReadinessScored)
+    expect(described_class.resolve("gaps_identified")).to eq(Engine::Predicates::GapsIdentified)
+    expect(described_class.resolve("improvements_drafted")).to eq(Engine::Predicates::ImprovementsDrafted)
   end
 
   it "raises for unknown predicate names" do

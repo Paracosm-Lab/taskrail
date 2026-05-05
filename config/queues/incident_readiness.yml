@@ -1,0 +1,81 @@
+name: Incident Readiness Scoring
+slug: incident_readiness
+stages:
+  - inventory_services
+  - score_readiness
+  - identify_gaps
+  - draft_improvements
+  - human_review
+  - done
+config:
+  default_max_retries: 2
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 0
+stage_configs:
+  inventory_services:
+    adapter_type: inline_claude
+    model_override: claude-haiku-4-5-20251001
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [service_inventory_produced]
+    agent_prompt: file://prompts/readiness_inventory.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: service_inventory
+  score_readiness:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [readiness_scored]
+    agent_prompt: file://prompts/readiness_score.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: readiness_scores
+  identify_gaps:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [gaps_identified]
+    agent_prompt: file://prompts/readiness_gaps.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: gap_analysis
+  draft_improvements:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy]
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria: [improvements_drafted]
+    agent_prompt: file://prompts/readiness_draft_improvements.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: improvement_drafts
+  human_review:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Review readiness scorecard and improvement drafts.
+    timeout_seconds: 86400
+  done:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60

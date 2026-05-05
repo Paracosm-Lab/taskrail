@@ -31,7 +31,11 @@ module Engine
       "diagnosis_produced" => Predicates::DiagnosisProduced,
       "runbook_selected" => Predicates::RunbookSelected,
       "runbook_executed" => Predicates::RunbookExecuted,
-      "recovery_verified" => Predicates::RecoveryVerified
+      "recovery_verified" => Predicates::RecoveryVerified,
+      "service_inventory_produced" => Predicates::ServiceInventoryProduced,
+      "readiness_scored" => Predicates::ReadinessScored,
+      "gaps_identified" => Predicates::GapsIdentified,
+      "improvements_drafted" => Predicates::ImprovementsDrafted
     }.freeze
 
     def self.resolve(name)

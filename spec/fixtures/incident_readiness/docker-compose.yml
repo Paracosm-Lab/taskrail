@@ -1,0 +1,23 @@
+services:
+  api:
+    build: ./services/api
+    command: bin/rails server -b 0.0.0.0
+    depends_on:
+      - postgres
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  worker:
+    build: ./services/worker
+    command: bundle exec sidekiq
+    depends_on:
+      - redis
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+  redis:
+    image: redis:7-alpine
