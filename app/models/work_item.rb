@@ -1,6 +1,7 @@
 class WorkItem < ApplicationRecord
   belongs_to :work_queue
   belongs_to :parent, class_name: "WorkItem", optional: true
+  belongs_to :pipe, optional: true
 
   has_many :children, -> { order(:position, :created_at, :id) }, class_name: "WorkItem", foreign_key: :parent_id, dependent: :nullify, inverse_of: :parent
   has_many :claims, dependent: :destroy
