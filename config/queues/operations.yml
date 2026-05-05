@@ -25,7 +25,7 @@ stage_configs:
     escalation_target: block_and_notify
     completion_criteria: [report_present]
     agent_prompt: file://prompts/ops_ingest_signals.md
-    timeout_seconds: 120
+    timeout_seconds: 600
   cluster_failures:
     adapter_type: inline_claude
     model_override: claude-sonnet-4-20250514
@@ -35,7 +35,7 @@ stage_configs:
     escalation_target: block_and_notify
     completion_criteria: [clusters_created]
     agent_prompt: file://prompts/ops_cluster_failures.md
-    timeout_seconds: 180
+    timeout_seconds: 600
     adapter_config:
       output_artifact_kind: clusters
   assess_instrumentation:
@@ -47,7 +47,7 @@ stage_configs:
     escalation_target: block_and_notify
     completion_criteria: [assessment_complete]
     agent_prompt: file://prompts/ops_assess_instrumentation.md
-    timeout_seconds: 240
+    timeout_seconds: 600
     adapter_config:
       output_artifact_kind: instrumentation_assessment
   map_runbooks:
@@ -59,7 +59,7 @@ stage_configs:
     escalation_target: block_and_notify
     completion_criteria: [runbook_mapped]
     agent_prompt: file://prompts/ops_map_runbooks.md
-    timeout_seconds: 180
+    timeout_seconds: 600
     adapter_config:
       output_artifact_kind: runbook_mapping
   draft_runbook:
@@ -71,7 +71,7 @@ stage_configs:
     escalation_target: block_and_notify
     completion_criteria: [runbook_drafted]
     agent_prompt: file://prompts/ops_draft_runbook.md
-    timeout_seconds: 300
+    timeout_seconds: 600
     adapter_config:
       output_artifact_kind: runbook_draft
   human_review:
