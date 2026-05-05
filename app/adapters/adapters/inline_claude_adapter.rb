@@ -41,11 +41,14 @@ module Adapters
     private
 
     def success_report(assignment, runner_result)
-      {
+      base = {
         "summary" => "Claude completed #{assignment.dig('stage', 'name')}",
         "response" => runner_result.stdout,
         "stage" => assignment.dig("stage", "name")
       }
+
+      structured = ResponseParser.extract_structured_fields(runner_result.stdout)
+      base.merge(structured)
     end
 
     def failure_report(runner_result)
