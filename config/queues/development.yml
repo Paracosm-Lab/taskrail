@@ -1,0 +1,105 @@
+name: Development
+slug: development
+stages:
+  - intake
+  - decompose
+  - build
+  - test
+  - review
+  - done
+config:
+  default_max_retries: 3
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 3
+stage_configs:
+  intake:
+    adapter_type: fake
+    model_override: fake-haiku
+    allowed_skills:
+      - read_spec
+      - classify
+      - tag_work_item
+    forbidden_skills: []
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria:
+      - report_present
+    agent_prompt: Classify the work item, validate the spec is readable, and tag cost/risk/complexity.
+    timeout_seconds: 600
+  decompose:
+    adapter_type: fake
+    model_override: fake-frontier
+    allowed_skills:
+      - read_spec
+      - create_child_items
+      - define_acceptance_criteria
+    forbidden_skills: []
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria:
+      - report_present
+    agent_prompt: Break the spec into ordered child work items with clear boundaries.
+    timeout_seconds: 600
+  build:
+    adapter_type: fake
+    model_override: fake-codex
+    allowed_skills:
+      - clone_repo
+      - create_branch
+      - edit_files
+      - run_tests
+    forbidden_skills:
+      - deploy
+      - merge_main
+      - mutate_database
+    max_retries: 3
+    escalation_target: block_and_notify
+    completion_criteria:
+      - branch_created
+      - report_present
+    agent_prompt: Implement the assigned chunk according to spec and produce a branch artifact.
+    timeout_seconds: 600
+  test:
+    adapter_type: fake
+    model_override: fake-shell
+    allowed_skills:
+      - run_tests
+      - run_linter
+      - run_coverage
+    forbidden_skills:
+      - edit_files
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria:
+      - tests_passed
+      - lint_clean
+      - coverage_not_decreased
+    agent_prompt: Validate the branch with tests, lint, and coverage. Do not edit files.
+    timeout_seconds: 600
+  review:
+    adapter_type: fake
+    model_override: fake-opus
+    allowed_skills:
+      - read_diff
+      - read_spec
+      - approve
+      - request_changes
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria:
+      - review_verdict
+    agent_prompt: Review the diff against the spec and approve or request changes.
+    timeout_seconds: 600
+  done:
+    adapter_type: fake
+    model_override: fake-terminal
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria:
+      - report_present
+    agent_prompt: Terminal state.
+    timeout_seconds: 60
