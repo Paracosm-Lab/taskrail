@@ -8,8 +8,8 @@ module Engine
       match = AgentMatcher.new(work_item: work_item).call
       claim = work_item.claims.create!(agent_type: match.agent_type, status: :active)
 
-      ClaimExecutor.new(claim: claim, stage_config: match.stage_config).call
-      TransitionManager.new(work_item: work_item, claim: claim, stage_config: match.stage_config).call
+      result = ClaimExecutor.new(claim: claim, stage_config: match.stage_config).call
+      TransitionManager.new(work_item: work_item, claim: claim, stage_config: match.stage_config).call unless result.is_a?(Engine::AsyncAdapterResult)
 
       work_item
     end

@@ -50,4 +50,33 @@ RSpec.describe Engine::Runner do
     expect(work_item.reports.count).to eq(1)
     expect(work_item.transition_logs.last.trigger).to eq("rule_satisfied")
   end
+
+  it "defers transitions for async-started claims" do
+    queue = WorkQueue.create!(name: "Async", slug: "async-#{SecureRandom.hex(4)}", stages: %w[build test])
+    StageConfig.create!(work_queue: queue, stage_name: "build", adapter_type: "async_fake", completion_criteria: ["branch_created"])
+    work_item = WorkItem.create!(work_queue: queue, title: "Async build", spec_url: "opaque spec", stage_name: "build", status: :pending)
+
+    adapter_class = Class.new do
+      def execute(_assignment)
+        Engine::AsyncAdapterResult.new(
+          provider: "codex",
+          external_id: "run-123",
+          status: "submitted",
+          metadata: {},
+          trace_events: []
+        )
+      end
+    end
+    stub_const("Engine::ClaimExecutor::ADAPTERS", Engine::ClaimExecutor::ADAPTERS.merge("async_fake" => adapter_class))
+
+    processed = described_class.new.call
+
+    expect(processed).to eq(work_item)
+    expect(work_item.reload.stage_name).to eq("build")
+    expect(work_item).to be_pending
+    expect(work_item.transition_logs).to be_empty
+    claim = work_item.claims.last
+    expect(claim).to be_active
+    expect(claim.async_execution).to eq(true)
+  end
 end
