@@ -1,0 +1,97 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+require "net/http"
+require "optparse"
+require "uri"
+
+class StupidClawCli
+  def initialize(argv, env = ENV, stdout = $stdout, stderr = $stderr)
+    @argv = argv
+    @base_url = env.fetch("STUPIDCLAW_API_URL", "http://localhost:3000")
+    @stdout = stdout
+    @stderr = stderr
+  end
+
+  def run
+    command = @argv.shift
+
+    case command
+    when "submit" then submit
+    when "status" then get("/api/v1/work_items/#{required_arg("WORK_ITEM_ID")}")
+    when "list" then list
+    when "answer" then answer
+    when "retry" then post("/api/v1/work_items/#{required_arg("WORK_ITEM_ID")}/retry", {})
+    when "cancel" then post("/api/v1/work_items/#{required_arg("WORK_ITEM_ID")}/cancel", {})
+    when "queues" then get("/api/v1/queues")
+    when "stages" then get("/api/v1/queues/#{required_arg("QUEUE")}/stages")
+    else
+      @stderr.puts "unknown command: #{command}"
+      return 1
+    end
+
+    0
+  rescue KeyError, ArgumentError => error
+    @stderr.puts error.message
+    1
+  end
+
+  private
+
+  def submit
+    options = {}
+    OptionParser.new do |parser|
+      parser.on("--queue QUEUE") { |value| options[:queue] = value }
+      parser.on("--spec SPEC") { |value| options[:spec_url] = value }
+      parser.on("--title TITLE") { |value| options[:title] = value }
+    end.parse!(@argv)
+
+    post("/api/v1/work_items", {
+      queue: options.fetch(:queue),
+      spec_url: options.fetch(:spec_url),
+      title: options.fetch(:title)
+    })
+  end
+
+  def list
+    options = {}
+    OptionParser.new do |parser|
+      parser.on("--queue QUEUE") { |value| options[:queue] = value }
+      parser.on("--stage STAGE") { |value| options[:stage] = value }
+    end.parse!(@argv)
+
+    query = URI.encode_www_form(options)
+    get(query.empty? ? "/api/v1/work_items" : "/api/v1/work_items?#{query}")
+  end
+
+  def answer
+    id = required_arg("WORK_ITEM_ID")
+    answer = required_arg("ANSWER")
+    post("/api/v1/work_items/#{id}/answer", { answer: answer })
+  end
+
+  def get(path)
+    uri = URI.join(@base_url, path)
+    print_response(Net::HTTP.get_response(uri))
+  end
+
+  def post(path, body)
+    uri = URI.join(@base_url, path)
+    request = Net::HTTP::Post.new(uri)
+    request["Content-Type"] = "application/json"
+    request.body = JSON.dump(body)
+    print_response(Net::HTTP.start(uri.hostname, uri.port) { |http| http.request(request) })
+  end
+
+  def print_response(response)
+    parsed = JSON.parse(response.body)
+    @stdout.puts JSON.pretty_generate(parsed)
+  end
+
+  def required_arg(name)
+    @argv.shift || raise(ArgumentError, "missing #{name}")
+  end
+end
+
+exit StupidClawCli.new(ARGV).run if $PROGRAM_NAME == __FILE__
