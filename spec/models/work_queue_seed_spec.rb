@@ -58,6 +58,73 @@ RSpec.describe "development queue seed" do
     expect(development.stage_configs.find_by!(stage_name: "build").adapter_type).to eq("fake")
   end
 
+  it "seeds the feature development cookbook queue with resolved prompt files and portable adapters" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "development-codex")
+    expect(queue.name).to eq("Development Codex")
+    expect(queue.stages).to eq(%w[intake decompose build test review done])
+    expect(queue.stage_configs.pluck(:stage_name)).to contain_exactly(*queue.stages)
+    expect(queue.config).to include(
+      "default_max_retries" => 3,
+      "default_timeout_seconds" => 600,
+      "default_escalation" => "block_and_notify",
+      "max_regression_loops" => 3
+    )
+
+    intake = queue.stage_configs.find_by!(stage_name: "intake")
+    expect(intake.adapter_type).to eq("inline_claude")
+    expect(intake.allowed_skills).to eq(%w[read_spec classify tag_work_item])
+    expect(intake.completion_criteria).to eq(["report_present"])
+    expect(intake.agent_prompt).to include("# Development Intake")
+    expect(intake.agent_prompt).to include("classify")
+    expect(intake.agent_prompt).not_to start_with("file://")
+
+    decompose = queue.stage_configs.find_by!(stage_name: "decompose")
+    expect(decompose.adapter_type).to eq("inline_claude")
+    expect(decompose.allowed_skills).to eq(%w[read_spec create_child_items define_acceptance_criteria])
+    expect(decompose.agent_prompt).to include("# Development Decompose")
+    expect(decompose.agent_prompt).to include("children")
+    expect(decompose.agent_prompt).not_to start_with("file://")
+
+    build = queue.stage_configs.find_by!(stage_name: "build")
+    expect(build.adapter_type).to eq("codex")
+    expect(build.allowed_skills).to eq(%w[clone_repo create_branch edit_files run_tests])
+    expect(build.forbidden_skills).to include("deploy", "merge_main", "mutate_database")
+    expect(build.completion_criteria).to eq(%w[branch_created report_present])
+    expect(build.agent_prompt).to include("# Development Build")
+    expect(build.agent_prompt).to include("branch")
+    expect(build.adapter_config).to include(
+      "command" => "codex",
+      "poll_command" => "codex"
+    )
+    expect(build.adapter_config).not_to have_key("working_directory")
+
+    test_stage = queue.stage_configs.find_by!(stage_name: "test")
+    expect(test_stage.adapter_type).to eq("shell_script")
+    expect(test_stage.allowed_skills).to eq(%w[run_tests run_linter run_coverage])
+    expect(test_stage.forbidden_skills).to include("edit_files")
+    expect(test_stage.completion_criteria).to eq(%w[tests_passed lint_clean coverage_not_decreased])
+    expect(test_stage.agent_prompt).to include("# Development Test")
+    expect(test_stage.agent_prompt).not_to start_with("file://")
+    expect(test_stage.adapter_config).not_to have_key("working_directory")
+    expect(test_stage.adapter_config.fetch("commands").map { |command| command.fetch("artifact") }).to include("test_results", "lint", "coverage")
+
+    review = queue.stage_configs.find_by!(stage_name: "review")
+    expect(review.adapter_type).to eq("inline_claude")
+    expect(review.max_retries).to eq(0)
+    expect(review.allowed_skills).to eq(%w[read_diff read_spec approve request_changes])
+    expect(review.completion_criteria).to eq(["review_verdict"])
+    expect(review.agent_prompt).to include("# Development Review")
+    expect(review.agent_prompt).to include("request_changes")
+    expect(review.agent_prompt).not_to start_with("file://")
+
+    done = queue.stage_configs.find_by!(stage_name: "done")
+    expect(done.adapter_type).to eq("fake")
+    expect(done.completion_criteria).to eq(["report_present"])
+  end
+
+
   it "seeds the operations queue with resolved prompt files" do
     load Rails.root.join("db/seeds.rb")
 

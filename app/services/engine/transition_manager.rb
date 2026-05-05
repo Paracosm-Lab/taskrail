@@ -31,6 +31,7 @@ module Engine
       return decompose if results.all?(&:passed?) && decompose_children.any?
       return advance if results.all?(&:passed?)
       return regress_or_block_review if review_regression_requested?
+      return regress_or_block_feature_validation if feature_validation_regression_requested?(results)
       return regress_or_block_generated_tests if generated_test_regression_requested?(results)
 
       retry_or_block(results)
@@ -134,7 +135,8 @@ module Engine
           stage_name: child_stage,
           status: :pending,
           position: index,
-          tags: child.fetch("tags", {})
+          tags: child.fetch("tags", {}),
+          metadata: child["spec_inline"].present? ? { "spec_inline" => child["spec_inline"] } : {}
         )
       end
 
@@ -143,7 +145,7 @@ module Engine
       @work_item.transition_logs.create!(
         from_stage: from_stage,
         to_stage: child_stage,
-        trigger: "rule_satisfied",
+        trigger: "decompose",
         details: { criteria: @stage_config.completion_criteria, children_count: decompose_children.count }
       )
     end
@@ -228,6 +230,13 @@ module Engine
       @work_item.stage_name == "run_tests" && results.any? { |result| !result.passed? } && previous_stage_named?("generate_tests")
     end
 
+    def feature_validation_regression_requested?(results)
+      @work_item.stage_name == "test" &&
+        results.any? { |result| !result.passed? } &&
+        previous_stage_named?("build") &&
+        failed_test_artifact.present?
+    end
+
     def previous_stage_named?(stage_name)
       stages = @work_item.work_queue.stages
       current_index = stages.index(@work_item.stage_name)
@@ -240,6 +249,35 @@ module Engine
       else
         block_regression_exhausted
       end
+    end
+
+    def regress_or_block_feature_validation
+      if @work_item.regression_count < max_regression_loops
+        regress_feature_validation
+      else
+        block_regression_exhausted
+      end
+    end
+
+    def regress_feature_validation
+      from_stage = @work_item.stage_name
+      feedback = test_failure_feedback
+      next_regression_count = @work_item.regression_count + 1
+
+      @work_item.update!(
+        stage_name: "build",
+        status: :pending,
+        retry_count: 0,
+        regression_count: next_regression_count,
+        metadata: @work_item.metadata.merge("feedback" => feedback)
+      )
+
+      @work_item.transition_logs.create!(
+        from_stage: from_stage,
+        to_stage: "build",
+        trigger: "regression",
+        details: { feedback: feedback, regression_count: next_regression_count }
+      )
     end
 
     def regress_generated_tests
@@ -264,10 +302,21 @@ module Engine
     end
 
     def generated_test_feedback
-      artifact = @claim.artifacts.where(kind: "test_results").order(created_at: :desc, id: :desc).first
-      output = artifact&.data&.fetch("output", nil).presence
-      failures = Array(artifact&.data&.fetch("failures", [])).join("; ").presence
+      output = failed_test_artifact&.data&.fetch("output", nil).presence
+      failures = Array(failed_test_artifact&.data&.fetch("failures", [])).join("; ").presence
       [output, failures].compact.join("\n").presence || "generated tests failed"
+    end
+
+    def test_failure_feedback
+      output = failed_test_artifact&.data&.fetch("output", nil).presence
+      failures = Array(failed_test_artifact&.data&.fetch("failures", [])).join("; ").presence
+      [output, failures].compact.join("\n").presence || "feature validation failed"
+    end
+
+    def failed_test_artifact
+      @failed_test_artifact ||= @claim.artifacts.where(kind: "test_results").order(created_at: :desc, id: :desc).find do |artifact|
+        artifact.data["passed"] == false
+      end
     end
 
     def regress_or_block_review

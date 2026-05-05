@@ -25,7 +25,7 @@ stage_configs:
     escalation_target: block_and_notify
     completion_criteria:
       - report_present
-    agent_prompt: Classify the work item, validate the spec is readable, and tag cost/risk/complexity.
+    agent_prompt: file://prompts/development_intake.md
     timeout_seconds: 600
     adapter_config:
       command: claude
@@ -44,7 +44,7 @@ stage_configs:
     escalation_target: block_and_notify
     completion_criteria:
       - report_present
-    agent_prompt: Break the spec into ordered child work items with clear boundaries.
+    agent_prompt: file://prompts/development_decompose.md
     timeout_seconds: 600
     adapter_config:
       command: claude
@@ -68,7 +68,7 @@ stage_configs:
     completion_criteria:
       - branch_created
       - report_present
-    agent_prompt: Implement the assigned chunk according to spec and produce a branch artifact.
+    agent_prompt: file://prompts/development_build.md
     timeout_seconds: 600
     adapter_config:
       command: codex
@@ -94,7 +94,7 @@ stage_configs:
       - tests_passed
       - lint_clean
       - coverage_not_decreased
-    agent_prompt: Validate the branch with tests, lint, and coverage. Do not edit files.
+    agent_prompt: file://prompts/development_test.md
     timeout_seconds: 600
     adapter_config:
       commands:
@@ -122,7 +122,7 @@ stage_configs:
     escalation_target: block_and_notify
     completion_criteria:
       - review_verdict
-    agent_prompt: Review the diff against the spec and approve or request changes.
+    agent_prompt: file://prompts/development_review.md
     timeout_seconds: 600
     adapter_config:
       command: claude

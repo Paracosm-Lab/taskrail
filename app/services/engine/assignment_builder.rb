@@ -12,6 +12,7 @@ module Engine
         callback_url: "/api/v1/claims/#{@claim.id}/report",
         work_item: work_item_payload,
         stage: stage_payload,
+        stage_config: stage_config_payload,
         prompt: @stage_config.agent_prompt,
         model: @stage_config.model_override,
         context: context_payload,
@@ -40,6 +41,19 @@ module Engine
         allowed_skills: @stage_config.allowed_skills,
         forbidden_skills: @stage_config.forbidden_skills,
         completion_criteria: @stage_config.completion_criteria
+      }
+    end
+
+    def stage_config_payload
+      {
+        stage_name: @stage_config.stage_name,
+        adapter_type: @stage_config.adapter_type,
+        allowed_skills: @stage_config.allowed_skills,
+        forbidden_skills: @stage_config.forbidden_skills,
+        completion_criteria: @stage_config.completion_criteria,
+        agent_prompt: @stage_config.agent_prompt,
+        timeout_seconds: @stage_config.timeout_seconds,
+        adapter_config: @stage_config.adapter_config
       }
     end
 

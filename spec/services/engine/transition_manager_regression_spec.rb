@@ -89,4 +89,38 @@ RSpec.describe "review regression" do
     expect(work_item.metadata["blocked_reason"]).to include("regression loop budget exhausted")
     expect(work_item.transition_logs.last.trigger).to eq("blocked")
   end
+
+  it "moves failed feature validation from test back to build with failure feedback" do
+    load Rails.root.join("db/seeds.rb")
+    queue = WorkQueue.find_by!(slug: "development-codex")
+    stage_config = queue.stage_configs.find_by!(stage_name: "test")
+    work_item = WorkItem.create!(
+      work_queue: queue,
+      title: "Feature validation",
+      spec_url: "opaque spec",
+      stage_name: "test",
+      regression_count: 0,
+      status: :claimed
+    )
+    claim = Claim.create!(work_item: work_item, agent_type: "shell_script", status: :completed)
+    Artifact.create!(
+      claim: claim,
+      work_item: work_item,
+      kind: "test_results",
+      data: {
+        "passed" => false,
+        "output" => "expected CalendarExport#to_ics to include DTSTART",
+        "failures" => ["CalendarExport#to_ics"]
+      }
+    )
+
+    Engine::TransitionManager.new(work_item: work_item, claim: claim, stage_config: stage_config).call
+
+    expect(work_item.reload.stage_name).to eq("build")
+    expect(work_item).to be_pending
+    expect(work_item.retry_count).to eq(0)
+    expect(work_item.regression_count).to eq(1)
+    expect(work_item.metadata["feedback"]).to include("expected CalendarExport#to_ics")
+    expect(work_item.transition_logs.last.trigger).to eq("regression")
+  end
 end

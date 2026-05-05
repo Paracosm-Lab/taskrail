@@ -88,6 +88,29 @@ RSpec.describe "bin/stupidclaw" do
     end
   end
 
+  it "submits a feature development cookbook work item" do
+    with_server({ id: "SC-104" }) do |api_url, requests|
+      stdout, _stderr, status = run_cli(
+        api_url,
+        "submit",
+        "--queue", "development-codex",
+        "--spec", "test/fixtures/apps/feature_development/README.md",
+        "--title", "Add iCalendar VEVENT export"
+      )
+
+      expect(status).to be_success
+      expect(stdout).to include("SC-104")
+      request = requests.pop
+      expect(request[:method]).to eq("POST")
+      expect(request[:path]).to eq("/api/v1/work_items")
+      expect(JSON.parse(request[:body])).to include(
+        "queue" => "development-codex",
+        "spec_url" => "test/fixtures/apps/feature_development/README.md",
+        "title" => "Add iCalendar VEVENT export"
+      )
+    end
+  end
+
   it "maps read and lifecycle commands to API endpoints" do
     with_server do |api_url, requests|
       commands = [

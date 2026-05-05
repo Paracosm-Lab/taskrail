@@ -34,6 +34,10 @@ RSpec.describe "codex async workflow", type: :model do
     expect(claim).to be_active
     expect(claim.async_execution).to eq(true)
     expect(claim.assignment.dig("async", "external_id")).to eq("codex-run-1")
+    expect(claim.assignment.dig("stage_config", "agent_prompt")).to include("# Development Build")
+    expect(claim.assignment.dig("stage_config", "completion_criteria")).to include("branch_created", "report_present")
+    expect(claim.assignment.dig("stage_config", "adapter_config", "command")).to eq("codex")
+    expect(claim.assignment.dig("stage_config", "adapter_config")).not_to have_key("working_directory")
 
     poll_result = CodexCliPoller::Result.new(
       status: "succeeded",
