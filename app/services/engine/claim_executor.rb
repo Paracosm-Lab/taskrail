@@ -3,7 +3,8 @@ module Engine
     class UnknownAdapter < StandardError; end
 
     ADAPTERS = {
-      "fake" => Adapters::FakeAdapter
+      "fake" => Adapters::FakeAdapter,
+      "shell_script" => Adapters::ShellScriptAdapter
     }.freeze
 
     def initialize(claim:, stage_config:)
