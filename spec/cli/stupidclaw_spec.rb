@@ -65,6 +65,7 @@ RSpec.describe "bin/stupidclaw" do
         [["status", "abc"], "GET", "/api/v1/work_items/abc", nil],
         [["status", "abc", "--traces"], "GET", "/api/v1/work_items/abc", "traces=true"],
         [["list", "--queue", "development", "--stage", "build"], "GET", "/api/v1/work_items", "queue=development&stage=build"],
+        [["list", "--queue", "development", "--stage", "build", "--status", "blocked", "--tag", "risk=high", "--tag", "domain=rails"], "GET", "/api/v1/work_items", "queue=development&stage=build&status=blocked&tags%5Brisk%5D=high&tags%5Bdomain%5D=rails"],
         [["answer", "abc", "Use bearer tokens"], "POST", "/api/v1/work_items/abc/answer", nil],
         [["retry", "abc"], "POST", "/api/v1/work_items/abc/retry", nil],
         [["cancel", "abc"], "POST", "/api/v1/work_items/abc/cancel", nil],

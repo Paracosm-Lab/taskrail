@@ -5,6 +5,14 @@ module Api
         items = WorkItem.includes(:work_queue).order(:created_at)
         items = items.joins(:work_queue).where(work_queues: { slug: params[:queue] }) if params[:queue].present?
         items = items.where(stage_name: params[:stage]) if params[:stage].present?
+        if params[:status].present?
+          return render json: { error: "invalid status: #{params[:status]}" }, status: :bad_request unless WorkItem.statuses.key?(params[:status])
+
+          items = items.where(status: params[:status])
+        end
+        tag_filters.each do |key, value|
+          items = items.where("work_items.tags ->> ? = ?", key, value)
+        end
 
         render json: { work_items: items.map { |work_item| serialize(work_item) } }
       end
@@ -58,6 +66,12 @@ module Api
 
       def work_item
         @work_item ||= WorkItem.find(params[:id])
+      end
+
+      def tag_filters
+        return {} unless params[:tags].present?
+
+        params[:tags].respond_to?(:to_unsafe_h) ? params[:tags].to_unsafe_h : params[:tags].to_h
       end
 
       def serialize(item, include_traces: false)

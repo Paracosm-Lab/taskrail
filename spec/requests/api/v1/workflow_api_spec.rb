@@ -34,6 +34,27 @@ RSpec.describe "Workflow API", type: :request do
     expect(response.parsed_body.fetch("work_items").map { |item| item.fetch("id") }).to include(id)
   end
 
+  it "filters work items by status and tags" do
+    queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[intake build done])
+    blocked_high = WorkItem.create!(work_queue: queue, title: "Blocked high", spec_url: "opaque spec", stage_name: "build", status: :blocked, tags: { "risk" => "high", "domain" => "rails" })
+    WorkItem.create!(work_queue: queue, title: "Pending high", spec_url: "opaque spec", stage_name: "build", status: :pending, tags: { "risk" => "high", "domain" => "rails" })
+    WorkItem.create!(work_queue: queue, title: "Blocked low", spec_url: "opaque spec", stage_name: "build", status: :blocked, tags: { "risk" => "low", "domain" => "rails" })
+    WorkItem.create!(work_queue: queue, title: "Blocked frontend", spec_url: "opaque spec", stage_name: "build", status: :blocked, tags: { "risk" => "high", "domain" => "frontend" })
+
+    get "/api/v1/work_items", params: { queue: queue.slug, status: "blocked", tags: { risk: "high", domain: "rails" } }
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body.fetch("work_items").map { |item| item.fetch("id") }).to eq([blocked_high.id])
+  end
+
+  it "rejects invalid work item status filters" do
+    queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[intake build done])
+    WorkItem.create!(work_queue: queue, title: "Pending", spec_url: "opaque spec", stage_name: "build", status: :pending)
+
+    get "/api/v1/work_items", params: { queue: queue.slug, status: "bogus" }
+    expect(response).to have_http_status(:bad_request)
+    expect(response.parsed_body.fetch("error")).to include("invalid status")
+  end
+
   it "includes a safe active claim summary for work items" do
     queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[build done])
     work_item = WorkItem.create!(work_queue: queue, title: "Codex smoke", spec_url: "opaque spec", stage_name: "build")

@@ -75,9 +75,16 @@ class StupidClawCli
     OptionParser.new do |parser|
       parser.on("--queue QUEUE") { |value| options[:queue] = value }
       parser.on("--stage STAGE") { |value| options[:stage] = value }
+      parser.on("--status STATUS") { |value| options[:status] = value }
+      parser.on("--tag KEY=VALUE") do |value|
+        key, tag_value = value.split("=", 2)
+        raise ArgumentError, "invalid tag filter" if key.nil? || key.empty? || tag_value.nil? || tag_value.empty?
+
+        (options[:tags] ||= {})[key] = tag_value
+      end
     end.parse!(@argv)
 
-    query = URI.encode_www_form(options)
+    query = list_query(options)
     get(query.empty? ? "/api/v1/work_items" : "/api/v1/work_items?#{query}")
   end
 
@@ -85,6 +92,14 @@ class StupidClawCli
     id = required_arg("WORK_ITEM_ID")
     answer = required_arg("ANSWER")
     post("/api/v1/work_items/#{id}/answer", { answer: answer })
+  end
+
+  def list_query(options)
+    pairs = options.reject { |key, _value| key == :tags }.to_a
+    options.fetch(:tags, {}).each do |key, value|
+      pairs << ["tags[#{key}]", value]
+    end
+    URI.encode_www_form(pairs)
   end
 
   def costs
