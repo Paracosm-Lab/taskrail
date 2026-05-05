@@ -8,7 +8,12 @@ module Engine
       "tests_passed" => Predicates::TestsPassed,
       "lint_clean" => Predicates::LintClean,
       "coverage_not_decreased" => Predicates::CoverageNotDecreased,
-      "review_verdict" => Predicates::ReviewVerdict
+      "review_verdict" => Predicates::ReviewVerdict,
+      "clusters_created" => Predicates::ClustersCreated,
+      "assessment_complete" => Predicates::AssessmentComplete,
+      "runbook_mapped" => Predicates::RunbookMapped,
+      "runbook_drafted" => Predicates::RunbookDrafted,
+      "validation_passed" => Predicates::ValidationPassed
     }.freeze
 
     def self.resolve(name)
