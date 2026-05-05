@@ -44,7 +44,11 @@ module Engine
       "service_inventory_produced" => Predicates::ServiceInventoryProduced,
       "readiness_scored" => Predicates::ReadinessScored,
       "gaps_identified" => Predicates::GapsIdentified,
-      "improvements_drafted" => Predicates::ImprovementsDrafted
+      "improvements_drafted" => Predicates::ImprovementsDrafted,
+      "secrets_scanned" => Predicates::SecretsScanned,
+      "dependencies_mapped" => Predicates::DependenciesMapped,
+      "risk_assessed" => Predicates::RiskAssessed,
+      "rotation_planned" => Predicates::RotationPlanned
     }.freeze
 
     def self.resolve(name)

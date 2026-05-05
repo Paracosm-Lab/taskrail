@@ -1,0 +1,11 @@
+services:
+  web:
+    build: ..
+    environment:
+      STRIPE_SECRET_KEY: sk_live_FAKE_COMPOSE_PAYMENT_KEY
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+  billing-worker:
+    build: ..
+    command: ruby app/jobs/nightly_billing_job.rb
+    environment:
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}

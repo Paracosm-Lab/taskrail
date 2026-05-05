@@ -789,6 +789,65 @@ RSpec.describe "development queue seed" do
     expect(serialized_queue).not_to include("/Users/")
   end
 
+  it "seeds the credential rotation audit queue with resolved read-only prompts" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "credential_rotation")
+    expect(queue.name).to eq("Credential Rotation Audit")
+    expect(queue.stages).to eq(%w[scan_secrets map_dependencies assess_risk draft_rotation_plan human_review done])
+    expect(queue.stage_configs.pluck(:stage_name)).to contain_exactly(*queue.stages)
+    expect(queue.config).to include(
+      "default_max_retries" => 2,
+      "default_timeout_seconds" => 600,
+      "default_escalation" => "block_and_notify",
+      "max_regression_loops" => 0
+    )
+
+    scan = queue.stage_configs.find_by!(stage_name: "scan_secrets")
+    expect(scan.adapter_type).to eq("inline_claude")
+    expect(scan.model_override).to eq("claude-haiku-4-5-20251001")
+    expect(scan.allowed_skills).to eq(["read_repo"])
+    expect(scan.forbidden_skills).to include("edit_files", "deploy", "mutate_database")
+    expect(scan.completion_criteria).to eq(["secrets_scanned"])
+    expect(scan.adapter_config).to include("output_artifact_kind" => "secret_inventory", "fixture_app" => "test/fixtures/apps/leaky_credentials", "read_only" => true)
+    expect(scan.agent_prompt).to include("# Credential Scan", "secret_inventory", "READ-ONLY")
+    expect(scan.agent_prompt).not_to start_with("file://")
+
+    dependencies = queue.stage_configs.find_by!(stage_name: "map_dependencies")
+    expect(dependencies.model_override).to eq("claude-sonnet-4-20250514")
+    expect(dependencies.completion_criteria).to eq(["dependencies_mapped"])
+    expect(dependencies.adapter_config).to include("input_artifact_kind" => "secret_inventory", "output_artifact_kind" => "dependency_map", "fixture_app" => "test/fixtures/apps/leaky_credentials", "read_only" => true)
+    expect(dependencies.agent_prompt).to include("# Credential Dependencies", "dependency_map")
+
+    risk = queue.stage_configs.find_by!(stage_name: "assess_risk")
+    expect(risk.completion_criteria).to eq(["risk_assessed"])
+    expect(risk.adapter_config).to include("input_artifact_kind" => "dependency_map", "secondary_input_artifact_kind" => "secret_inventory", "output_artifact_kind" => "risk_assessment", "read_only" => true)
+    expect(risk.adapter_config.fetch("spawn_targets")).to include("exposed_history" => "security_scan", "missing_secrets_manager" => "incident_readiness")
+    expect(risk.agent_prompt).to include("# Credential Risk", "critical")
+
+    plan = queue.stage_configs.find_by!(stage_name: "draft_rotation_plan")
+    expect(plan.completion_criteria).to eq(["rotation_planned"])
+    expect(plan.forbidden_skills).to include("edit_files", "deploy", "mutate_database")
+    expect(plan.adapter_config).to include("input_artifact_kind" => "risk_assessment", "secondary_input_artifact_kind" => "dependency_map", "output_artifact_kind" => "rotation_plan", "read_only" => true)
+    expect(plan.adapter_config.fetch("spawn_targets")).to include("hardcoded_code_change" => "development", "exposed_history" => "security_scan", "missing_secrets_manager" => "incident_readiness")
+    expect(plan.agent_prompt).to include("# Credential Rotation Plan", "Do not rotate")
+
+    human_review = queue.stage_configs.find_by!(stage_name: "human_review")
+    expect(human_review.adapter_type).to eq("fake")
+    expect(human_review.completion_criteria).to eq(["report_present"])
+    expect(human_review.timeout_seconds).to eq(86_400)
+    expect(human_review.agent_prompt).to include("Do not rotate automatically")
+
+    serialized_queue = Rails.root.join("config/queues/credential_rotation.yml").read
+    expect(serialized_queue).to include("file://prompts/credential_scan.md")
+    expect(serialized_queue).to include("file://prompts/credential_dependencies.md")
+    expect(serialized_queue).to include("file://prompts/credential_risk.md")
+    expect(serialized_queue).to include("file://prompts/credential_rotation_plan.md")
+    expect(serialized_queue).not_to include(Rails.root.to_s)
+    expect(serialized_queue).not_to include("/Users/")
+    expect(serialized_queue).not_to include("working_directory")
+  end
+
   it "is idempotent" do
     2.times { load Rails.root.join("db/seeds.rb") }
 

@@ -1,0 +1,4 @@
+production:
+  stripe_secret_key: sk_live_FAKE_18_MONTH_OLD_ADMIN_KEY
+  stripe_publishable_key: pk_live_FAKE_PUBLIC_KEY
+  webhook_secret: whsec_FAKE_SHARED_WEBHOOK_SECRET
