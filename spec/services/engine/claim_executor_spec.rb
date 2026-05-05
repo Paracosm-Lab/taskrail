@@ -46,6 +46,34 @@ RSpec.describe Engine::ClaimExecutor do
     expect(claim.artifacts.where(kind: "test_results").first.data["passed"]).to eq(true)
   end
 
+  it "executes inline_claude stages" do
+    queue = WorkQueue.create!(name: "Claude Queue", slug: "claude-queue-#{SecureRandom.hex(4)}", stages: %w[intake done])
+    stage_config = StageConfig.create!(
+      work_queue: queue,
+      stage_name: "intake",
+      adapter_type: "inline_claude",
+      adapter_config: {
+        "command" => "claude",
+        "args" => ["--print"],
+        "working_directory" => Rails.root.to_s,
+        "output_artifact_kind" => "agent_report"
+      },
+      completion_criteria: ["report_present"],
+      agent_prompt: "Classify this item."
+    )
+    work_item = WorkItem.create!(work_queue: queue, title: "Claude smoke", spec_url: "opaque", stage_name: "intake")
+    claim = Claim.create!(work_item: work_item, agent_type: "inline_claude", status: :active)
+
+    runner_result = ClaudeCliRunner::Result.new(stdout: "Looks good", stderr: "", exit_status: 0, duration_ms: 10)
+    allow(ClaudeCliRunner).to receive(:new).and_return(instance_double(ClaudeCliRunner, call: runner_result))
+
+    result = described_class.new(claim: claim, stage_config: stage_config).call
+
+    expect(result.status).to eq("success")
+    expect(work_item.artifacts.find_by!(kind: "agent_report").data["content"]).to include("Looks good")
+    expect(claim.trace.trace_events.pluck(:event_type)).to include("claude_cli")
+  end
+
   it "marks a claim failed when the adapter raises" do
     queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[build test])
     stage_config = StageConfig.create!(work_queue: queue, stage_name: "build", adapter_type: "missing")
