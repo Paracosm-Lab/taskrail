@@ -128,21 +128,40 @@ module Engine
     end
 
     def block_with_reasons(reasons)
+      reason = reasons.join("; ")
+      escalation = human_escalation_payload(reason)
+
       @work_item.update!(
         status: :blocked,
-        metadata: @work_item.metadata.merge("blocked_reason" => reasons.join("; "))
+        metadata: @work_item.metadata.merge("blocked_reason" => reason, "escalation" => escalation)
       )
 
       @work_item.transition_logs.create!(
         from_stage: @work_item.stage_name,
         to_stage: @work_item.stage_name,
         trigger: "blocked",
-        details: { reasons: reasons, retry_count: @work_item.retry_count }
+        details: { reasons: reasons, retry_count: @work_item.retry_count, escalation_target: escalation.fetch("target"), human_action_required: true }
       )
     end
 
     def max_retries
       @stage_config.max_retries || @work_item.work_queue.config["default_max_retries"] || 3
+    end
+
+    def human_escalation_payload(reason)
+      {
+        "target" => escalation_target,
+        "reason" => reason,
+        "stage_name" => @work_item.stage_name,
+        "retry_count" => @work_item.retry_count,
+        "human_action_required" => true,
+        "question" => "Work item blocked in #{@work_item.stage_name}: #{reason}. Provide guidance or retry/cancel."
+      }
+    end
+
+    def escalation_target
+      raw_target = @stage_config.escalation_target.presence || @work_item.work_queue.config["default_escalation"]
+      raw_target == "block_and_notify" ? "human" : (raw_target.presence || "human")
     end
 
     def review_regression_requested?
@@ -180,17 +199,18 @@ module Engine
 
     def block_regression_exhausted
       reason = "regression loop budget exhausted"
+      escalation = human_escalation_payload(reason)
 
       @work_item.update!(
         status: :blocked,
-        metadata: @work_item.metadata.merge("blocked_reason" => reason)
+        metadata: @work_item.metadata.merge("blocked_reason" => reason, "escalation" => escalation)
       )
 
       @work_item.transition_logs.create!(
         from_stage: @work_item.stage_name,
         to_stage: @work_item.stage_name,
         trigger: "blocked",
-        details: { reasons: [reason], regression_count: @work_item.regression_count }
+        details: { reasons: [reason], regression_count: @work_item.regression_count, escalation_target: escalation.fetch("target"), human_action_required: true }
       )
     end
 

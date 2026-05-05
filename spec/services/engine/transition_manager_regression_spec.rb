@@ -29,6 +29,17 @@ RSpec.describe "review regression" do
 
     expect(work_item.reload).to be_blocked
     expect(work_item.metadata["blocked_reason"]).to include("regression loop budget exhausted")
+    expect(work_item.metadata.fetch("escalation")).to include(
+      "target" => "human",
+      "stage_name" => "review",
+      "retry_count" => 0,
+      "human_action_required" => true
+    )
+    expect(work_item.metadata.dig("escalation", "reason")).to eq("regression loop budget exhausted")
     expect(work_item.transition_logs.last.trigger).to eq("blocked")
+    expect(work_item.transition_logs.last.details).to include(
+      "human_action_required" => true,
+      "escalation_target" => "human"
+    )
   end
 end
