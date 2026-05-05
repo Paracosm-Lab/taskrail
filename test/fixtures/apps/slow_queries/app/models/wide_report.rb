@@ -1,0 +1,2 @@
+class WideReport < ApplicationRecord
+end

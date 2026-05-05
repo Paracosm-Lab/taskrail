@@ -1,0 +1,93 @@
+name: Database Query Health Check
+slug: query_health
+stages:
+  - collect_queries
+  - analyze_performance
+  - draft_fixes
+  - run_tests
+  - human_review
+  - done
+config:
+  default_max_retries: 2
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 2
+stage_configs:
+  collect_queries:
+    adapter_type: shell_script
+    model_override: claude-haiku-4-5-20251001
+    allowed_skills: [run_tests, read_repo]
+    forbidden_skills: [edit_files, deploy, mutate_database]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [query_inventory_produced]
+    agent_prompt: file://prompts/query_collect.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: query_inventory
+      fixture_app: test/fixtures/apps/slow_queries
+      docker_profile: cookbook-query-health
+      commands:
+        - artifact: query_inventory
+          command: bin/query-health collect --format=json
+  analyze_performance:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy, mutate_database]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [query_analyzed]
+    agent_prompt: file://prompts/query_analyze.md
+    timeout_seconds: 600
+    adapter_config:
+      input_artifact_kind: query_inventory
+      output_artifact_kind: query_analysis
+      spawn_target_queue: development
+  draft_fixes:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy, mutate_database]
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria: [query_fixes_drafted]
+    agent_prompt: file://prompts/query_draft_fixes.md
+    timeout_seconds: 600
+    adapter_config:
+      input_artifact_kind: query_analysis
+      output_artifact_kind: query_patches
+  run_tests:
+    adapter_type: shell_script
+    allowed_skills: [run_tests]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [tests_passed]
+    agent_prompt: Apply migrations and code patches, run the test suite, and report pass/fail plus any query-count delta.
+    timeout_seconds: 600
+    adapter_config:
+      input_artifact_kind: query_patches
+      output_artifact_kind: test_results
+      docker_profile: cookbook-query-health
+      commands:
+        - artifact: test_results
+          command: bin/query-health apply-and-test --format=json
+  human_review:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Review query optimizations and index migrations. Flag large-table indexes for concurrent migration and DBA approval before production rollout.
+    timeout_seconds: 86400
+  done:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60
