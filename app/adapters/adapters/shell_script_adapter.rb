@@ -31,6 +31,9 @@ module Adapters
       {
         "name" => command_config.fetch("name"),
         "command" => command_config.fetch("command"),
+        "artifact" => command_config["artifact"],
+        "previous_coverage" => command_config["previous_coverage"],
+        "current_coverage" => command_config["current_coverage"],
         "stdout" => command_result.stdout,
         "stderr" => command_result.stderr,
         "exit_status" => command_result.exit_status,
@@ -44,7 +47,7 @@ module Adapters
         "commands" => command_results.map { |result| report_command(result) },
         "failed_commands" => command_results.reject { |result| result.fetch("exit_status").zero? }.map { |result| result.fetch("name") }
       }
-      artifacts = [{ "kind" => "test_results", "data" => { "passed" => all_passed, "commands" => report.fetch("commands") } }]
+      artifacts = validation_artifacts(command_results, all_passed, report.fetch("commands"))
       trace_events = command_results.map { |result| trace_event(result) }
 
       if all_passed
@@ -60,6 +63,45 @@ module Adapters
         artifacts: [{ "kind" => "test_results", "data" => { "passed" => false, "commands" => [] } }],
         trace_events: []
       )
+    end
+
+    def validation_artifacts(command_results, all_passed, report_commands)
+      mapped_artifacts = command_results.filter_map { |result| validation_artifact(result) }
+      unmapped_commands = command_results.select { |result| result["artifact"].blank? }
+
+      if mapped_artifacts.empty?
+        return [{ "kind" => "test_results", "data" => { "passed" => all_passed, "commands" => report_commands } }]
+      end
+
+      if unmapped_commands.any?
+        mapped_artifacts.unshift(
+          "kind" => "test_results",
+          "data" => {
+            "passed" => unmapped_commands.all? { |result| result.fetch("exit_status").zero? },
+            "commands" => unmapped_commands.map { |result| report_command(result) }
+          }
+        )
+      end
+
+      mapped_artifacts
+    end
+
+    def validation_artifact(result)
+      case result["artifact"]
+      when "test_results"
+        { "kind" => "test_results", "data" => { "passed" => result.fetch("exit_status").zero?, "command" => report_command(result) } }
+      when "lint"
+        { "kind" => "lint", "data" => { "clean" => result.fetch("exit_status").zero?, "command" => report_command(result) } }
+      when "coverage"
+        {
+          "kind" => "coverage",
+          "data" => {
+            "current" => result.fetch("current_coverage"),
+            "previous" => result.fetch("previous_coverage"),
+            "command" => report_command(result)
+          }
+        }
+      end
     end
 
     def report_command(result)
