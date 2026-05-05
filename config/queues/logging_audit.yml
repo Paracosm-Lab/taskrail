@@ -1,0 +1,96 @@
+name: Logging Consistency Audit
+slug: logging_audit
+stages:
+  - scan_log_statements
+  - assess_quality
+  - draft_standard
+  - draft_fixes
+  - run_tests
+  - human_review
+  - done
+config:
+  default_max_retries: 2
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 2
+stage_configs:
+  scan_log_statements:
+    adapter_type: inline_claude
+    model_override: claude-haiku-4-5-20251001
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [log_inventory_produced]
+    agent_prompt: file://prompts/logging_scan_statements.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: log_inventory
+  assess_quality:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [logging_assessed]
+    agent_prompt: file://prompts/logging_assess_quality.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: logging_assessment
+  draft_standard:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [standard_drafted]
+    agent_prompt: file://prompts/logging_draft_standard.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: logging_standard
+  draft_fixes:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy]
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria: [fixes_drafted]
+    agent_prompt: file://prompts/logging_draft_fixes.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: log_patches
+  run_tests:
+    adapter_type: shell_script
+    allowed_skills: [run_tests]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [tests_passed]
+    agent_prompt: Apply logging patches and run the logging audit cookbook E2E spec. Report pass/fail.
+    timeout_seconds: 600
+    adapter_config:
+      commands:
+        - name: logging audit cookbook e2e
+          command: bundle exec rspec spec/e2e/logging_audit_cookbook_spec.rb
+          artifact: test_results
+  human_review:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Review the logging standard and drafted fixes before merge.
+    timeout_seconds: 86400
+  done:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60

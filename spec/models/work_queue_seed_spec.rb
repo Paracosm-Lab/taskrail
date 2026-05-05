@@ -575,6 +575,89 @@ RSpec.describe "development queue seed" do
     expect(human_review.timeout_seconds).to eq(86_400)
   end
 
+  it "seeds the logging audit cookbook queue with resolved prompt files" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "logging_audit")
+    expect(queue.name).to eq("Logging Consistency Audit")
+    expect(queue.stages).to eq(%w[
+      scan_log_statements
+      assess_quality
+      draft_standard
+      draft_fixes
+      run_tests
+      human_review
+      done
+    ])
+    expect(queue.stage_configs.pluck(:stage_name)).to contain_exactly(*queue.stages)
+    expect(queue.config).to include(
+      "default_max_retries" => 2,
+      "default_timeout_seconds" => 600,
+      "default_escalation" => "block_and_notify",
+      "max_regression_loops" => 2
+    )
+
+    scan = queue.stage_configs.find_by!(stage_name: "scan_log_statements")
+    expect(scan.adapter_type).to eq("inline_claude")
+    expect(scan.model_override).to eq("claude-haiku-4-5-20251001")
+    expect(scan.allowed_skills).to eq(["read_repo"])
+    expect(scan.forbidden_skills).to include("edit_files", "deploy")
+    expect(scan.completion_criteria).to eq(["log_inventory_produced"])
+    expect(scan.adapter_config).to eq("output_artifact_kind" => "log_inventory")
+    expect(scan.agent_prompt).to include("# Logging Scan Statements")
+    expect(scan.agent_prompt).to include("log_inventory")
+    expect(scan.agent_prompt).not_to start_with("file://")
+
+    assess = queue.stage_configs.find_by!(stage_name: "assess_quality")
+    expect(assess.adapter_type).to eq("inline_claude")
+    expect(assess.model_override).to eq("claude-sonnet-4-20250514")
+    expect(assess.completion_criteria).to eq(["logging_assessed"])
+    expect(assess.adapter_config).to eq("output_artifact_kind" => "logging_assessment")
+    expect(assess.agent_prompt).to include("# Logging Assess Quality")
+    expect(assess.agent_prompt).not_to start_with("file://")
+
+    standard = queue.stage_configs.find_by!(stage_name: "draft_standard")
+    expect(standard.adapter_type).to eq("inline_claude")
+    expect(standard.model_override).to eq("claude-sonnet-4-20250514")
+    expect(standard.completion_criteria).to eq(["standard_drafted"])
+    expect(standard.adapter_config).to eq("output_artifact_kind" => "logging_standard")
+    expect(standard.agent_prompt).to include("# Logging Draft Standard")
+    expect(standard.agent_prompt).not_to start_with("file://")
+
+    fixes = queue.stage_configs.find_by!(stage_name: "draft_fixes")
+    expect(fixes.adapter_type).to eq("inline_claude")
+    expect(fixes.model_override).to eq("claude-sonnet-4-20250514")
+    expect(fixes.allowed_skills).to eq(["read_repo"])
+    expect(fixes.forbidden_skills).to include("deploy")
+    expect(fixes.completion_criteria).to eq(["fixes_drafted"])
+    expect(fixes.adapter_config).to eq("output_artifact_kind" => "log_patches")
+    expect(fixes.agent_prompt).to include("# Logging Draft Fixes")
+    expect(fixes.agent_prompt).not_to start_with("file://")
+
+    run_tests = queue.stage_configs.find_by!(stage_name: "run_tests")
+    expect(run_tests.adapter_type).to eq("shell_script")
+    expect(run_tests.allowed_skills).to eq(["run_tests"])
+    expect(run_tests.forbidden_skills).to include("edit_files", "deploy")
+    expect(run_tests.completion_criteria).to eq(["tests_passed"])
+    expect(run_tests.adapter_config).not_to have_key("working_directory")
+    expect(run_tests.adapter_config.fetch("commands")).to contain_exactly(
+      include(
+        "name" => "logging audit cookbook e2e",
+        "artifact" => "test_results",
+        "command" => "bundle exec rspec spec/e2e/logging_audit_cookbook_spec.rb"
+      )
+    )
+
+    human_review = queue.stage_configs.find_by!(stage_name: "human_review")
+    expect(human_review.adapter_type).to eq("fake")
+    expect(human_review.completion_criteria).to eq(["report_present"])
+    expect(human_review.timeout_seconds).to eq(86_400)
+
+    done = queue.stage_configs.find_by!(stage_name: "done")
+    expect(done.adapter_type).to eq("fake")
+    expect(done.completion_criteria).to eq(["report_present"])
+  end
+
   it "is idempotent" do
     2.times { load Rails.root.join("db/seeds.rb") }
 
