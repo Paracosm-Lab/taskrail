@@ -13,7 +13,10 @@ module Engine
       "assessment_complete" => Predicates::AssessmentComplete,
       "runbook_mapped" => Predicates::RunbookMapped,
       "runbook_drafted" => Predicates::RunbookDrafted,
-      "validation_passed" => Predicates::ValidationPassed
+      "validation_passed" => Predicates::ValidationPassed,
+      "query_inventory_produced" => Predicates::QueryInventoryProduced,
+      "query_analyzed" => Predicates::QueryAnalyzed,
+      "query_fixes_drafted" => Predicates::QueryFixesDrafted
     }.freeze
 
     def self.resolve(name)
