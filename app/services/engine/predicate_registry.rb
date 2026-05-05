@@ -22,7 +22,16 @@ module Engine
       "query_analyzed" => Predicates::QueryAnalyzed,
       "query_fixes_drafted" => Predicates::QueryFixesDrafted,
       "job_inventory_produced" => Predicates::JobInventoryProduced,
-      "observability_assessed" => Predicates::ObservabilityAssessed
+      "observability_assessed" => Predicates::ObservabilityAssessed,
+      "disruption_planned" => Predicates::DisruptionPlanned,
+      "disruption_executed" => Predicates::DisruptionExecuted,
+      "impact_observed" => Predicates::ImpactObserved,
+      "recovery_evaluated" => Predicates::RecoveryEvaluated,
+      "alerts_detected" => Predicates::AlertsDetected,
+      "diagnosis_produced" => Predicates::DiagnosisProduced,
+      "runbook_selected" => Predicates::RunbookSelected,
+      "runbook_executed" => Predicates::RunbookExecuted,
+      "recovery_verified" => Predicates::RecoveryVerified
     }.freeze
 
     def self.resolve(name)

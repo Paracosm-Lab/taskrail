@@ -1,0 +1,97 @@
+name: Chaos Monkey
+slug: chaos_monkey
+stages:
+  - plan_disruption
+  - execute_disruption
+  - monitor_impact
+  - hold_for_response
+  - evaluate_recovery
+  - score_and_report
+  - done
+config:
+  default_max_retries: 1
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 0
+stage_configs:
+  plan_disruption:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo, read_environment_inventory]
+    forbidden_skills: [deploy, mutate_database, execute_staging]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [disruption_planned]
+    agent_prompt: file://prompts/chaos_plan_disruption.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: disruption_plan
+  execute_disruption:
+    adapter_type: docker_compose
+    allowed_skills: [execute_staging]
+    forbidden_skills: [deploy, mutate_database]
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [disruption_executed]
+    agent_prompt: file://prompts/chaos_execute_disruption.md
+    timeout_seconds: 300
+    adapter_config:
+      compose_file: spec/fixtures/chaos_staging/docker-compose.staging.yml
+      output_artifact_kind: disruption_record
+  monitor_impact:
+    adapter_type: shell_script
+    allowed_skills: [read_sentry]
+    forbidden_skills: [deploy, mutate_database, execute_staging]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [impact_observed]
+    agent_prompt: file://prompts/chaos_monitor_impact.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: impact_report
+      commands:
+        - name: monitor fake sentry impact
+          command: bash spec/fixtures/chaos_staging/scripts/monitor_fake_sentry.sh
+          artifact: impact_report
+  hold_for_response:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Waiting for the linked chaos_response work item to complete recovery attempt.
+    timeout_seconds: 1800
+  evaluate_recovery:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy, mutate_database]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [recovery_evaluated]
+    agent_prompt: file://prompts/chaos_evaluate_recovery.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: recovery_evaluation
+  score_and_report:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy, mutate_database]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: file://prompts/chaos_score_report.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: chaos_report
+  done:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60

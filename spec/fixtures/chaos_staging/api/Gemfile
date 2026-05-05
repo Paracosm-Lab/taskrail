@@ -1,0 +1,4 @@
+source "https://rubygems.org"
+gem "rack", "~> 3.0"
+puma_version = ENV.fetch("PUMA_VERSION", "6.4.0")
+gem "puma", puma_version

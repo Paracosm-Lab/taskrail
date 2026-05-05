@@ -1,0 +1,26 @@
+services:
+  chaos-api:
+    build: ./spec/fixtures/chaos_staging/api
+    environment:
+      RACK_ENV: staging
+      FAKE_SENTRY_EVENTS_PATH: /tmp/fake_sentry/events.jsonl
+    ports:
+      - "127.0.0.1:${CHAOS_STAGING_API_PORT:-3929}:9292"
+    volumes:
+      - fake_sentry:/tmp/fake_sentry
+    depends_on:
+      - chaos-postgres
+  chaos-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chaos_staging
+    ports:
+      - "127.0.0.1:${CHAOS_STAGING_POSTGRES_PORT:-55432}:5432"
+  fake-sentry:
+    image: alpine:3.20
+    command: sh -c "mkdir -p /tmp/fake_sentry && touch /tmp/fake_sentry/events.jsonl && tail -f /tmp/fake_sentry/events.jsonl"
+    volumes:
+      - fake_sentry:/tmp/fake_sentry
+volumes:
+  fake_sentry:

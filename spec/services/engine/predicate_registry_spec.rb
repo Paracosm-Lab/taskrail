@@ -21,6 +21,15 @@ RSpec.describe Engine::PredicateRegistry do
     expect(described_class.resolve("removals_drafted")).to eq(Engine::Predicates::RemovalsDrafted)
     expect(described_class.resolve("job_inventory_produced")).to eq(Engine::Predicates::JobInventoryProduced)
     expect(described_class.resolve("observability_assessed")).to eq(Engine::Predicates::ObservabilityAssessed)
+    expect(described_class.resolve("disruption_planned")).to eq(Engine::Predicates::DisruptionPlanned)
+    expect(described_class.resolve("disruption_executed")).to eq(Engine::Predicates::DisruptionExecuted)
+    expect(described_class.resolve("impact_observed")).to eq(Engine::Predicates::ImpactObserved)
+    expect(described_class.resolve("recovery_evaluated")).to eq(Engine::Predicates::RecoveryEvaluated)
+    expect(described_class.resolve("alerts_detected")).to eq(Engine::Predicates::AlertsDetected)
+    expect(described_class.resolve("diagnosis_produced")).to eq(Engine::Predicates::DiagnosisProduced)
+    expect(described_class.resolve("runbook_selected")).to eq(Engine::Predicates::RunbookSelected)
+    expect(described_class.resolve("runbook_executed")).to eq(Engine::Predicates::RunbookExecuted)
+    expect(described_class.resolve("recovery_verified")).to eq(Engine::Predicates::RecoveryVerified)
   end
 
   it "raises for unknown predicate names" do

@@ -1,0 +1,103 @@
+name: Chaos Response
+slug: chaos_response
+stages:
+  - detect_alerts
+  - diagnose_failure
+  - select_runbook
+  - execute_runbook
+  - verify_recovery
+  - report_outcome
+  - done
+config:
+  default_max_retries: 1
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 0
+stage_configs:
+  detect_alerts:
+    adapter_type: shell_script
+    allowed_skills: [read_sentry]
+    forbidden_skills: [deploy, mutate_database]
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria: [alerts_detected]
+    agent_prompt: file://prompts/response_detect_alerts.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: detected_alerts
+      commands:
+        - name: detect fake sentry alerts
+          command: bash spec/fixtures/chaos_staging/scripts/detect_fake_alerts.sh
+          artifact: detected_alerts
+  diagnose_failure:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_sentry]
+    forbidden_skills: [deploy, mutate_database, execute_staging, read_disruption_plan]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [diagnosis_produced]
+    agent_prompt: file://prompts/response_diagnose.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: diagnosis
+  select_runbook:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy, mutate_database, execute_staging]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [runbook_selected]
+    agent_prompt: file://prompts/response_select_runbook.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: runbook_selection
+  execute_runbook:
+    adapter_type: docker_compose
+    allowed_skills: [execute_staging, read_repo]
+    forbidden_skills: [deploy, mutate_database]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [runbook_executed]
+    agent_prompt: file://prompts/response_execute_runbook.md
+    timeout_seconds: 1200
+    adapter_config:
+      compose_file: spec/fixtures/chaos_staging/docker-compose.staging.yml
+      output_artifact_kind: runbook_execution
+  verify_recovery:
+    adapter_type: shell_script
+    allowed_skills: [read_sentry, execute_staging]
+    forbidden_skills: [deploy, mutate_database]
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria: [recovery_verified]
+    agent_prompt: file://prompts/response_verify_recovery.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: recovery_verification
+      commands:
+        - name: verify fake recovery
+          command: bash spec/fixtures/chaos_staging/scripts/verify_fake_recovery.sh
+          artifact: recovery_verification
+  report_outcome:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy, mutate_database]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: file://prompts/response_report_outcome.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: response_outcome
+  done:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60
