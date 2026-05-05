@@ -48,6 +48,20 @@ RSpec.describe Cli::DashboardDataLoader do
     expect(data.work_items).to eq([{ "id" => 1, "status" => "pending" }])
   end
 
+  it "ignores non-positive limits" do
+    client = dashboard_client_with_work_items([
+      { "id" => 1, "status" => "pending" },
+      { "id" => 2, "status" => "pending" }
+    ])
+
+    data = described_class.new(client: client, api_url: "http://example.test", queue_slug: "development", limit: 0).call
+
+    expect(data.work_items).to eq([
+      { "id" => 1, "status" => "pending" },
+      { "id" => 2, "status" => "pending" }
+    ])
+  end
+
   it "escapes queue slugs in path and query API calls" do
     client = instance_double(Cli::StupidClawApiClient)
     allow(client).to receive(:get_json).with("/api/v1/queues/dev%26status%3Dblocked/stages").and_return("queue" => {}, "stages" => [])

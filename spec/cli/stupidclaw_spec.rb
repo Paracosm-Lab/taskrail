@@ -108,6 +108,27 @@ RSpec.describe "bin/stupidclaw" do
     end
   end
 
+  it "renders dashboard filters" do
+    responses = {
+      "/api/v1/queues/development/stages" => { queue: { name: "Development", slug: "development" }, stages: [] },
+      "/api/v1/work_items?queue=development" => {
+        work_items: [
+          { id: 12, status: "pending", stage_name: "build", title: "Add calendar" },
+          { id: 13, status: "blocked", stage_name: "review", title: "Review auth changes" }
+        ]
+      },
+      "/api/v1/costs" => {}
+    }
+
+    with_server(responses) do |api_url, _requests|
+      stdout, _stderr, status = run_cli(api_url, "dashboard", "--queue", "development", "--status", "blocked", "--limit", "1")
+
+      expect(status).to be_success
+      expect(stdout).to include("Review auth changes")
+      expect(stdout).not_to include("Add calendar")
+    end
+  end
+
   it "requires a queue for dashboard" do
     with_server do |api_url, _requests|
       _stdout, stderr, status = run_cli(api_url, "dashboard")

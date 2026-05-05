@@ -36,7 +36,8 @@ module Cli
     def filtered_work_items(work_items)
       items = work_items
       items = items.select { |item| item["status"] == status } unless blank?(status)
-      items = items.first(limit.to_i) unless blank?(limit)
+      limit_value = limit.to_i
+      items = items.first(limit_value) if limit_value.positive?
       items
     end
 
