@@ -21,7 +21,8 @@ RSpec.describe "bin/stupidclaw" do
         method, full_path, = request_line.split(" ")
         path, query_string = full_path.split("?", 2)
         requests << { method: method, path: path, query: query_string, body: body }
-        response = JSON.dump(response_body)
+        response_payload = response_for(response_body, full_path)
+        response = JSON.dump(response_payload)
         socket.write "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: #{response.bytesize}\r\nConnection: close\r\n\r\n#{response}"
         socket.close
       rescue IOError
@@ -34,6 +35,12 @@ RSpec.describe "bin/stupidclaw" do
     server&.close
     thread&.kill
     thread&.join
+  end
+
+  def response_for(response_body, full_path)
+    return response_body unless response_body.key?(full_path)
+
+    response_body.fetch(full_path)
   end
 
   def run_cli(api_url, *args)
@@ -71,6 +78,42 @@ RSpec.describe "bin/stupidclaw" do
         expect(request[:method]).to eq(expected_method)
         expect(request[:path]).to eq(expected_path)
       end
+    end
+  end
+
+  it "renders a one-shot dashboard" do
+    responses = {
+      "/api/v1/queues/development/stages" => {
+        queue: { name: "Development", slug: "development" },
+        stages: [{ name: "build", adapter_type: "codex", completion_criteria: ["branch_created"] }]
+      },
+      "/api/v1/work_items?queue=development" => {
+        work_items: [{ id: 12, status: "pending", stage_name: "build", title: "Add calendar" }]
+      },
+      "/api/v1/costs" => { total_cost_cents: 7, total_tokens_in: 10, total_tokens_out: 20 }
+    }
+
+    with_server(responses) do |api_url, requests|
+      stdout, _stderr, status = run_cli(api_url, "dashboard", "--queue", "development")
+
+      expect(status).to be_success
+      expect(stdout).to include("StupidClaw Dashboard")
+      expect(stdout).to include("development")
+      expect(stdout).to include("Add calendar")
+      expect(3.times.map { requests.pop }.map { |request| [request[:method], request[:path], request[:query]] }).to contain_exactly(
+        ["GET", "/api/v1/queues/development/stages", nil],
+        ["GET", "/api/v1/work_items", "queue=development"],
+        ["GET", "/api/v1/costs", nil]
+      )
+    end
+  end
+
+  it "requires a queue for dashboard" do
+    with_server do |api_url, _requests|
+      _stdout, stderr, status = run_cli(api_url, "dashboard")
+
+      expect(status).not_to be_success
+      expect(stderr).to include("missing queue")
     end
   end
 end

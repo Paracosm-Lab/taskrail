@@ -48,6 +48,17 @@ RSpec.describe Cli::DashboardDataLoader do
     expect(data.work_items).to eq([{ "id" => 1, "status" => "pending" }])
   end
 
+  it "escapes queue slugs in path and query API calls" do
+    client = instance_double(Cli::StupidClawApiClient)
+    allow(client).to receive(:get_json).with("/api/v1/queues/dev%26status%3Dblocked/stages").and_return("queue" => {}, "stages" => [])
+    allow(client).to receive(:get_json).with("/api/v1/work_items?queue=dev%26status%3Dblocked").and_return("work_items" => [])
+    allow(client).to receive(:get_json).with("/api/v1/costs").and_return({})
+
+    data = described_class.new(client: client, api_url: "http://example.test", queue_slug: "dev&status=blocked").call
+
+    expect(data.queue_slug).to eq("dev&status=blocked")
+  end
+
   def dashboard_client_with_work_items(work_items)
     instance_double(Cli::StupidClawApiClient).tap do |client|
       allow(client).to receive(:get_json).with("/api/v1/queues/development/stages").and_return("queue" => { "slug" => "development" }, "stages" => [])

@@ -70,7 +70,10 @@ module Cli
     end
 
     def number(value)
-      value.presence || 0
+      return 0 if value.nil?
+      return 0 if value.respond_to?(:empty?) && value.empty?
+
+      value
     end
   end
 end

@@ -4,6 +4,8 @@
 require "json"
 require "optparse"
 require_relative "../app/services/cli/stupid_claw_api_client"
+require_relative "../app/services/cli/dashboard_data_loader"
+require_relative "../app/services/cli/dashboard_renderer"
 
 class StupidClawCli
   def initialize(argv, env = ENV, stdout = $stdout, stderr = $stderr)
@@ -26,6 +28,7 @@ class StupidClawCli
     when "cancel" then post("/api/v1/work_items/#{required_arg("WORK_ITEM_ID")}/cancel", {})
     when "queues" then get("/api/v1/queues")
     when "stages" then get("/api/v1/queues/#{required_arg("QUEUE")}/stages")
+    when "dashboard" then dashboard
     else
       @stderr.puts "unknown command: #{command}"
       return 1
@@ -69,6 +72,25 @@ class StupidClawCli
     id = required_arg("WORK_ITEM_ID")
     answer = required_arg("ANSWER")
     post("/api/v1/work_items/#{id}/answer", { answer: answer })
+  end
+
+  def dashboard
+    options = {}
+    OptionParser.new do |parser|
+      parser.on("--queue QUEUE") { |value| options[:queue] = value }
+      parser.on("--limit LIMIT") { |value| options[:limit] = value }
+      parser.on("--status STATUS") { |value| options[:status] = value }
+    end.parse!(@argv)
+
+    queue_slug = options.fetch(:queue) { raise ArgumentError, "missing queue" }
+    data = Cli::DashboardDataLoader.new(
+      client: @client,
+      api_url: @base_url,
+      queue_slug: queue_slug,
+      limit: options[:limit],
+      status: options[:status]
+    ).call
+    @stdout.puts Cli::DashboardRenderer.new(data: data).render
   end
 
   def get(path)

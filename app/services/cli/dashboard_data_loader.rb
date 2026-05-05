@@ -1,3 +1,5 @@
+require "uri"
+
 module Cli
   class DashboardDataLoader
     DashboardData = Data.define(:api_url, :queue_slug, :queue, :stages, :work_items, :costs)
@@ -11,8 +13,10 @@ module Cli
     end
 
     def call
-      stages_payload = client.get_json("/api/v1/queues/#{queue_slug}/stages")
-      work_items_payload = client.get_json("/api/v1/work_items?queue=#{queue_slug}")
+      encoded_queue_slug = URI.encode_www_form_component(queue_slug)
+      queue_query = URI.encode_www_form(queue: queue_slug)
+      stages_payload = client.get_json("/api/v1/queues/#{encoded_queue_slug}/stages")
+      work_items_payload = client.get_json("/api/v1/work_items?#{queue_query}")
       costs_payload = client.get_json("/api/v1/costs")
 
       DashboardData.new(
@@ -31,9 +35,13 @@ module Cli
 
     def filtered_work_items(work_items)
       items = work_items
-      items = items.select { |item| item["status"] == status } if status.present?
-      items = items.first(limit.to_i) if limit.present?
+      items = items.select { |item| item["status"] == status } unless blank?(status)
+      items = items.first(limit.to_i) unless blank?(limit)
       items
+    end
+
+    def blank?(value)
+      value.nil? || value.respond_to?(:empty?) && value.empty?
     end
   end
 end
