@@ -1,0 +1,72 @@
+services:
+  fake-sentry:
+    image: ruby:3.3-alpine
+    working_dir: /app
+    command: ruby fake_service.rb
+    environment:
+      FAKE_SERVICE_NAME: fake-sentry
+      FAKE_SERVICE_PORT: 4010
+    ports:
+      - "${FAKE_SENTRY_PORT:-4010}:4010"
+    volumes:
+      - ./fake_services:/app:ro
+
+  fake-logs:
+    image: ruby:3.3-alpine
+    working_dir: /app
+    command: ruby fake_service.rb
+    environment:
+      FAKE_SERVICE_NAME: fake-logs
+      FAKE_SERVICE_PORT: 4011
+    ports:
+      - "${FAKE_LOGS_PORT:-4011}:4011"
+    volumes:
+      - ./fake_services:/app:ro
+
+  fake-api:
+    image: ruby:3.3-alpine
+    working_dir: /app
+    command: ruby fake_service.rb
+    environment:
+      FAKE_SERVICE_NAME: fake-api
+      FAKE_SERVICE_PORT: 4012
+    ports:
+      - "${FAKE_API_PORT:-4012}:4012"
+    volumes:
+      - ./fake_services:/app:ro
+
+  fake-worker:
+    image: ruby:3.3-alpine
+    working_dir: /app
+    command: ruby fake_service.rb
+    environment:
+      FAKE_SERVICE_NAME: fake-worker
+      FAKE_SERVICE_PORT: 4013
+    ports:
+      - "${FAKE_WORKER_PORT:-4013}:4013"
+    volumes:
+      - ./fake_services:/app:ro
+
+  fake-monitoring:
+    image: ruby:3.3-alpine
+    working_dir: /app
+    command: ruby fake_service.rb
+    environment:
+      FAKE_SERVICE_NAME: fake-monitoring
+      FAKE_SERVICE_PORT: 4014
+    ports:
+      - "${FAKE_MONITORING_PORT:-4014}:4014"
+    volumes:
+      - ./fake_services:/app:ro
+
+  fake-staging-app:
+    image: ruby:3.3-alpine
+    working_dir: /app
+    command: ruby fake_service.rb
+    environment:
+      FAKE_SERVICE_NAME: fake-staging-app
+      FAKE_SERVICE_PORT: 4015
+    ports:
+      - "${FAKE_STAGING_APP_PORT:-4015}:4015"
+    volumes:
+      - ./fake_services:/app:ro
