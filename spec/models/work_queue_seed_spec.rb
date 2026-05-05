@@ -28,14 +28,30 @@ RSpec.describe "development queue seed" do
     expect(test_stage.adapter_config["commands"].map { |command| command["artifact"] }).to include("test_results", "lint", "coverage")
   end
 
+  it "seeds the claude-backed development queue" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "development-claude")
+    expect(queue.stage_configs.find_by!(stage_name: "intake").adapter_type).to eq("inline_claude")
+    expect(queue.stage_configs.find_by!(stage_name: "decompose").adapter_type).to eq("inline_claude")
+    expect(queue.stage_configs.find_by!(stage_name: "review").adapter_type).to eq("inline_claude")
+    expect(queue.stage_configs.find_by!(stage_name: "test").adapter_type).to eq("shell_script")
+
+    development = WorkQueue.find_by!(slug: "development")
+    expect(development.stage_configs.find_by!(stage_name: "intake").adapter_type).to eq("fake")
+  end
+
   it "is idempotent" do
     2.times { load Rails.root.join("db/seeds.rb") }
 
     queue = WorkQueue.find_by!(slug: "development")
     shell_queue = WorkQueue.find_by!(slug: "development-shell")
+    claude_queue = WorkQueue.find_by!(slug: "development-claude")
     expect(WorkQueue.where(slug: "development").count).to eq(1)
     expect(WorkQueue.where(slug: "development-shell").count).to eq(1)
+    expect(WorkQueue.where(slug: "development-claude").count).to eq(1)
     expect(queue.stage_configs.count).to eq(6)
     expect(shell_queue.stage_configs.count).to eq(6)
+    expect(claude_queue.stage_configs.count).to eq(6)
   end
 end
