@@ -21,8 +21,10 @@ MVP-0 includes:
 - JSON API endpoints
 - Thin `bin/stupidclaw` CLI
 - End-to-end fake workflow coverage
+- Deterministic shell validation adapter for local test/lint/coverage evidence
+- Optional inline Claude CLI adapter for local intake/decompose/review experiments
 
-MVP-0 intentionally excludes real Claude/Codex/model adapters. Those come after the fake workflow is boring and reliable.
+MVP-0 still keeps the default `development` queue fake-backed. Real model adapters are opt-in queue fixtures, and Codex/async build adapters remain future work.
 
 ## Requirements
 
@@ -191,6 +193,48 @@ bin/rails runner 'queue = WorkQueue.find_by!(slug: "development-shell"); item = 
 ```
 
 Expected output includes `"stage":"review"` and artifact kinds `test_results`, `lint`, and `coverage`.
+
+## InlineClaudeAdapter
+
+`InlineClaudeAdapter` runs a configured local Claude CLI command synchronously for stages such as intake, decompose, and review. It sends a deterministic assignment prompt on stdin and converts stdout/stderr/exit status into normal StupidClaw reports, artifacts, and trace events.
+
+The default `development` queue remains fake-backed. The optional `development-claude` queue uses `inline_claude` for intake, decompose, and review; keeps build and done fake-backed; and uses `shell_script` for test validation.
+
+Configure Claude CLI authentication outside StupidClaw. Do not commit API keys, tokens, or credentials into queue YAML.
+
+```bash
+bin/stupidclaw stages development-claude
+```
+
+An inline Claude stage config looks like:
+
+```yaml
+adapter_type: inline_claude
+model_override: claude-3-5-sonnet-latest
+adapter_config:
+  command: claude
+  args:
+    - --print
+  working_directory: /path/to/project
+  output_artifact_kind: agent_report
+```
+
+Runtime behavior:
+
+- StupidClaw builds a prompt from the assignment payload: work item, stage prompt, allowed/forbidden skills, completion criteria, and context.
+- The configured command receives that prompt on stdin.
+- Exit status `0` stores a successful report plus an `agent_report` artifact by default.
+- Non-zero exit status stores a failed report with stdout/stderr/exit status.
+- Each run writes a `claude_cli` trace event with prompt/output summaries, duration, exit status metadata, and placeholder token/cost fields.
+- The adapter never chooses the next stage; queue-owned transition rules decide whether the item advances.
+
+Smoke-test only the Claude-backed intake stage with a real local Claude CLI. This assumes the development database has no older pending items because `Engine::Runner` processes the oldest runnable pending item:
+
+```bash
+bin/rails runner 'queue = WorkQueue.find_by!(slug: "development-claude"); WorkItem.pending.update_all(status: WorkItem.statuses[:blocked]); item = WorkItem.create!(work_queue: queue, title: "Claude smoke", spec_url: "opaque spec", stage_name: "intake"); Engine::Runner.new.call; puts({ id: item.id, status: item.reload.status, stage: item.stage_name, report: item.reports.last&.body&.fetch("summary", nil) }.to_json)'
+```
+
+Expected output includes `"stage":"decompose"` after the intake report satisfies the queue-owned `report_present` transition rule.
 
 ## Tests
 
