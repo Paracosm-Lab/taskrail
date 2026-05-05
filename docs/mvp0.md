@@ -42,6 +42,7 @@ bin/stupidclaw stages development
 bin/stupidclaw submit --queue development --spec ./README.md --title "Smoke test"
 bin/stupidclaw list --queue development
 bin/stupidclaw status WORK_ITEM_ID
+bin/stupidclaw answer WORK_ITEM_ID "Use bearer tokens"
 bin/stupidclaw retry WORK_ITEM_ID
 bin/stupidclaw cancel WORK_ITEM_ID
 ```
@@ -59,7 +60,20 @@ bundle exec rspec
 bundle exec rspec spec/services/engine/fake_workflow_integration_spec.rb
 bundle exec rspec spec/requests/api/v1
 bundle exec rspec spec/cli/stupidclaw_spec.rb
+bundle exec rspec spec/services/cli
 ```
+
+## Dashboard TUI
+
+The TUI skin is available through the existing API-backed CLI:
+
+```bash
+bin/stupidclaw dashboard --queue development
+bin/stupidclaw dashboard --queue development-codex --status pending --limit 20
+bin/stupidclaw dashboard --queue development --watch --refresh 5
+```
+
+The dashboard is a read-only terminal skin over the Rails API. It uses `STUPIDCLAW_API_URL` like the rest of `bin/stupidclaw`, renders queue stages/work items/costs, and shows safe active-claim summaries for async Codex work without exposing prompts, full assignments, or credentials. It does not own workflow transitions; queue-owned transitions remain authoritative. Use the existing `submit`, `answer`, `retry`, and `cancel` commands for writes.
 
 ## What to inspect when debugging
 
@@ -72,9 +86,9 @@ Claim.order(:created_at).pluck(:agent_type, :status, :async_execution)
 Trace.sum(:total_cost_cents)
 ```
 
-## Next phase
+## Completed stages
 
-Add real adapters only after MVP-0 stays green:
+The next-phase adapter and TUI milestones are now implemented on top of MVP-0 while preserving the fake-backed default `development` queue:
 
 1. ShellScriptAdapter for deterministic test/lint stages
 2. InlineClaudeAdapter for intake/decompose/review

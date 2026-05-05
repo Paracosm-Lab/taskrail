@@ -135,6 +135,38 @@ bin/stupidclaw retry WORK_ITEM_ID
 bin/stupidclaw cancel WORK_ITEM_ID
 ```
 
+## Dashboard TUI
+
+The dashboard is a read-only terminal skin over the same Rails API used by the JSON CLI commands. It does not read Rails models directly and it does not own workflow transitions; queue-owned transition rules remain authoritative. Use the existing `submit`, `answer`, `retry`, and `cancel` commands for writes.
+
+The default API base URL is `http://localhost:3000`; override it with `STUPIDCLAW_API_URL` when the server runs elsewhere.
+
+Render a one-shot dashboard:
+
+```bash
+bin/stupidclaw dashboard --queue development
+```
+
+Show a filtered queue view:
+
+```bash
+bin/stupidclaw dashboard --queue development-codex --status pending --limit 20
+```
+
+Watch the dashboard refresh periodically:
+
+```bash
+bin/stupidclaw dashboard --queue development --watch --refresh 5
+```
+
+Dashboard rows show work item id, status, stage, title, and any safe active-claim summary returned by the API. Async Codex work appears as a compact claim marker such as:
+
+```text
+codex:active async run-123
+```
+
+The dashboard rows intentionally display only safe active-claim fields: agent type, status, async flag, and external id. The underlying API summary also includes the claim id for clients that need it. The dashboard does not display full assignment payloads, prompts, or credentials.
+
 ## Fake workflow smoke test
 
 With the database prepared and seeded:
