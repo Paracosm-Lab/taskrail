@@ -658,6 +658,69 @@ RSpec.describe "development queue seed" do
     expect(done.completion_criteria).to eq(["report_present"])
   end
 
+  it "seeds the test coverage backfill cookbook queue with resolved prompt files" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "test_backfill")
+    expect(queue.name).to eq("Test Coverage Backfill")
+    expect(queue.stages).to eq(%w[
+      scan_coverage
+      identify_gaps
+      generate_tests
+      run_tests
+      human_review
+      done
+    ])
+    expect(queue.stage_configs.pluck(:stage_name)).to contain_exactly(*queue.stages)
+    expect(queue.config).to include(
+      "default_escalation" => "block_and_notify",
+      "max_regression_loops" => 3
+    )
+
+    scan = queue.stage_configs.find_by!(stage_name: "scan_coverage")
+    expect(scan.adapter_type).to eq("shell_script")
+    expect(scan.allowed_skills).to eq(["run_coverage"])
+    expect(scan.forbidden_skills).to include("edit_files", "deploy")
+    expect(scan.completion_criteria).to eq(["coverage_map_produced"])
+    expect(scan.agent_prompt).to include("# Backfill Scan Coverage")
+    expect(scan.agent_prompt).not_to start_with("file://")
+    expect(scan.adapter_config).to include("output_artifact_kind" => "coverage_map")
+    expect(scan.adapter_config).not_to have_key("working_directory")
+
+    identify = queue.stage_configs.find_by!(stage_name: "identify_gaps")
+    expect(identify.adapter_type).to eq("inline_claude")
+    expect(identify.model_override).to eq("claude-sonnet-4-20250514")
+    expect(identify.allowed_skills).to eq(["read_repo"])
+    expect(identify.completion_criteria).to eq(["test_plan_produced"])
+    expect(identify.agent_prompt).to include("# Backfill Identify Gaps")
+    expect(identify.adapter_config).to include("output_artifact_kind" => "test_plan")
+
+    generate = queue.stage_configs.find_by!(stage_name: "generate_tests")
+    expect(generate.adapter_type).to eq("inline_claude")
+    expect(generate.model_override).to eq("claude-sonnet-4-20250514")
+    expect(generate.allowed_skills).to eq(["read_repo"])
+    expect(generate.forbidden_skills).to include("deploy")
+    expect(generate.completion_criteria).to eq(["tests_generated"])
+    expect(generate.agent_prompt).to include("# Backfill Generate Tests")
+    expect(generate.adapter_config).to include("output_artifact_kind" => "generated_tests")
+
+    run_tests = queue.stage_configs.find_by!(stage_name: "run_tests")
+    expect(run_tests.adapter_type).to eq("shell_script")
+    expect(run_tests.allowed_skills).to eq(["run_tests"])
+    expect(run_tests.completion_criteria).to eq(["tests_passed"])
+    expect(run_tests.adapter_config).to include("output_artifact_kind" => "test_results")
+    expect(run_tests.adapter_config).not_to have_key("working_directory")
+
+    human_review = queue.stage_configs.find_by!(stage_name: "human_review")
+    expect(human_review.adapter_type).to eq("fake")
+    expect(human_review.timeout_seconds).to eq(86_400)
+
+    serialized_queue = Rails.root.join("config/queues/test_backfill.yml").read
+    expect(serialized_queue).to include("file://cookbooks/prompts/test_backfill/scan_coverage.md")
+    expect(serialized_queue).not_to include(Rails.root.to_s)
+    expect(serialized_queue).not_to include("/Users/")
+  end
+
   it "is idempotent" do
     2.times { load Rails.root.join("db/seeds.rb") }
 

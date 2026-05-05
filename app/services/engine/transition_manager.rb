@@ -31,6 +31,7 @@ module Engine
       return decompose if results.all?(&:passed?) && decompose_children.any?
       return advance if results.all?(&:passed?)
       return regress_or_block_review if review_regression_requested?
+      return regress_or_block_generated_tests if generated_test_regression_requested?(results)
 
       retry_or_block(results)
     end
@@ -221,6 +222,52 @@ module Engine
 
     def review_regression_requested?
       @work_item.stage_name == "review" && review_report&.body&.fetch("verdict", nil) == "request_changes"
+    end
+
+    def generated_test_regression_requested?(results)
+      @work_item.stage_name == "run_tests" && results.any? { |result| !result.passed? } && previous_stage_named?("generate_tests")
+    end
+
+    def previous_stage_named?(stage_name)
+      stages = @work_item.work_queue.stages
+      current_index = stages.index(@work_item.stage_name)
+      current_index.present? && current_index.positive? && stages.fetch(current_index - 1) == stage_name
+    end
+
+    def regress_or_block_generated_tests
+      if @work_item.regression_count < max_regression_loops
+        regress_generated_tests
+      else
+        block_regression_exhausted
+      end
+    end
+
+    def regress_generated_tests
+      from_stage = @work_item.stage_name
+      feedback = generated_test_feedback
+      next_regression_count = @work_item.regression_count + 1
+
+      @work_item.update!(
+        stage_name: "generate_tests",
+        status: :pending,
+        retry_count: 0,
+        regression_count: next_regression_count,
+        metadata: @work_item.metadata.merge("feedback" => feedback)
+      )
+
+      @work_item.transition_logs.create!(
+        from_stage: from_stage,
+        to_stage: "generate_tests",
+        trigger: "regression",
+        details: { feedback: feedback, regression_count: next_regression_count }
+      )
+    end
+
+    def generated_test_feedback
+      artifact = @claim.artifacts.where(kind: "test_results").order(created_at: :desc, id: :desc).first
+      output = artifact&.data&.fetch("output", nil).presence
+      failures = Array(artifact&.data&.fetch("failures", [])).join("; ").presence
+      [output, failures].compact.join("\n").presence || "generated tests failed"
     end
 
     def regress_or_block_review

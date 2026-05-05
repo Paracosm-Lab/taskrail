@@ -1,0 +1,87 @@
+name: Test Coverage Backfill
+slug: test_backfill
+stages:
+  - scan_coverage
+  - identify_gaps
+  - generate_tests
+  - run_tests
+  - human_review
+  - done
+config:
+  default_max_retries: 2
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 3
+stage_configs:
+  scan_coverage:
+    adapter_type: shell_script
+    allowed_skills: [run_coverage]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [coverage_map_produced]
+    agent_prompt: file://cookbooks/prompts/test_backfill/scan_coverage.md
+    timeout_seconds: 300
+    adapter_config:
+      output_artifact_kind: coverage_map
+      commands:
+        - name: coverage-map-fixture
+          command: >-
+            ruby -rjson -e 'puts JSON.generate({files: [{path: "test/fixtures/apps/untested_app/app/models/widget.rb", coverage_pct: 42.0, uncovered_lines: ["8-14"]}]})'
+  identify_gaps:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [test_plan_produced]
+    agent_prompt: file://cookbooks/prompts/test_backfill/identify_gaps.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: test_plan
+  generate_tests:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy]
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria: [tests_generated]
+    agent_prompt: file://cookbooks/prompts/test_backfill/generate_tests.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: generated_tests
+  run_tests:
+    adapter_type: shell_script
+    allowed_skills: [run_tests]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [tests_passed]
+    agent_prompt: Write generated spec files to disk and run the test suite. Report pass/fail with output.
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: test_results
+      commands:
+        - name: fixture-generated-specs
+          command: ruby -e 'puts "fake generated spec run"'
+          artifact: test_results
+  human_review:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Review generated tests before merge.
+    timeout_seconds: 86400
+  done:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60
