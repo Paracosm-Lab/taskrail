@@ -19,6 +19,8 @@ module Engine
       @claim.update!(assignment: assignment.deep_stringify_keys)
 
       result = adapter.execute(assignment)
+      return start_async_result(result) if result.is_a?(Engine::AsyncAdapterResult)
+
       persist_result(result)
       @claim.update!(status: :completed, completed_at: Time.current)
       result
@@ -37,6 +39,22 @@ module Engine
       raise UnknownAdapter, "unknown adapter: #{@stage_config.adapter_type}" unless adapter_class
 
       adapter_class.new
+    end
+
+    def start_async_result(result)
+      @claim.update!(
+        status: :active,
+        async_execution: true,
+        assignment: @claim.assignment.merge(
+          "async" => {
+            "provider" => result.provider,
+            "external_id" => result.external_id,
+            "status" => result.status,
+            "metadata" => result.metadata
+          }
+        )
+      )
+      result
     end
 
     def persist_result(result)

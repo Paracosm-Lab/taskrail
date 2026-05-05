@@ -74,6 +74,36 @@ RSpec.describe Engine::ClaimExecutor do
     expect(claim.trace.trace_events.pluck(:event_type)).to include("claude_cli")
   end
 
+  it "leaves claims active when an adapter starts async execution" do
+    queue = WorkQueue.create!(name: "Async", slug: "async-#{SecureRandom.hex(4)}", stages: %w[build test])
+    stage_config = StageConfig.create!(work_queue: queue, stage_name: "build", adapter_type: "async_fake")
+    work_item = WorkItem.create!(work_queue: queue, title: "Async build", spec_url: "opaque", stage_name: "build")
+    claim = Claim.create!(work_item: work_item, agent_type: "async_fake", status: :active)
+
+    adapter_class = Class.new do
+      def execute(_assignment)
+        Engine::AsyncAdapterResult.new(
+          provider: "codex",
+          external_id: "run-123",
+          status: "submitted",
+          metadata: { "branch" => "sc-async" },
+          trace_events: []
+        )
+      end
+    end
+
+    stub_const("Engine::ClaimExecutor::ADAPTERS", Engine::ClaimExecutor::ADAPTERS.merge("async_fake" => adapter_class))
+
+    result = described_class.new(claim: claim, stage_config: stage_config).call
+
+    expect(result).to be_a(Engine::AsyncAdapterResult)
+    expect(claim.reload).to be_active
+    expect(claim.async_execution).to eq(true)
+    expect(claim.completed_at).to be_nil
+    expect(claim.assignment.dig("async", "provider")).to eq("codex")
+    expect(claim.assignment.dig("async", "external_id")).to eq("run-123")
+  end
+
   it "marks a claim failed when the adapter raises" do
     queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[build test])
     stage_config = StageConfig.create!(work_queue: queue, stage_name: "build", adapter_type: "missing")
