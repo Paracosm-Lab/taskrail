@@ -43,8 +43,8 @@ RSpec.describe "bin/stupidclaw" do
     response_body.fetch(full_path)
   end
 
-  def run_cli(api_url, *args)
-    Open3.capture3({ "STUPIDCLAW_API_URL" => api_url }, Rails.root.join("bin/stupidclaw").to_s, *args)
+  def run_cli(api_url, *args, env: {})
+    Open3.capture3({ "STUPIDCLAW_API_URL" => api_url }.merge(env), Rails.root.join("bin/stupidclaw").to_s, *args)
   end
 
   it "submits a work item" do
@@ -126,6 +126,27 @@ RSpec.describe "bin/stupidclaw" do
       expect(status).to be_success
       expect(stdout).to include("Review auth changes")
       expect(stdout).not_to include("Add calendar")
+    end
+  end
+
+  it "watches dashboard output for a capped number of iterations" do
+    responses = {
+      "/api/v1/queues/development/stages" => { queue: { name: "Development", slug: "development" }, stages: [] },
+      "/api/v1/work_items?queue=development" => { work_items: [{ id: 12, status: "pending", stage_name: "build", title: "Add calendar" }] },
+      "/api/v1/costs" => {}
+    }
+
+    with_server(responses) do |api_url, requests|
+      stdout, _stderr, status = run_cli(
+        api_url,
+        "dashboard", "--queue", "development", "--watch", "--refresh", "0",
+        env: { "STUPIDCLAW_DASHBOARD_ITERATIONS" => "2" }
+      )
+
+      expect(status).to be_success
+      expect(stdout.scan("StupidClaw Dashboard").size).to eq(2)
+      expect(stdout).to include("\e[H\e[2J")
+      expect(6.times.map { requests.pop }.count).to eq(6)
     end
   end
 

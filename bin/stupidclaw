@@ -10,6 +10,7 @@ require_relative "../app/services/cli/dashboard_renderer"
 class StupidClawCli
   def initialize(argv, env = ENV, stdout = $stdout, stderr = $stderr)
     @argv = argv
+    @env = env
     @base_url = env.fetch("STUPIDCLAW_API_URL", "http://localhost:3000")
     @stdout = stdout
     @stderr = stderr
@@ -80,17 +81,42 @@ class StupidClawCli
       parser.on("--queue QUEUE") { |value| options[:queue] = value }
       parser.on("--limit LIMIT") { |value| options[:limit] = value }
       parser.on("--status STATUS") { |value| options[:status] = value }
+      parser.on("--watch") { options[:watch] = true }
+      parser.on("--refresh SECONDS") { |value| options[:refresh] = value }
     end.parse!(@argv)
 
     queue_slug = options.fetch(:queue) { raise ArgumentError, "missing queue" }
+    if options[:watch]
+      watch_dashboard(options.merge(queue: queue_slug))
+    else
+      @stdout.puts render_dashboard(options.merge(queue: queue_slug))
+    end
+  end
+
+  def watch_dashboard(options)
+    iterations = @env.fetch("STUPIDCLAW_DASHBOARD_ITERATIONS", nil)&.to_i
+    refresh_seconds = [options.fetch(:refresh, 5).to_f, 0].max
+    count = 0
+
+    loop do
+      @stdout.print "\e[H\e[2J"
+      @stdout.puts render_dashboard(options)
+      count += 1
+      break if iterations&.positive? && count >= iterations
+
+      sleep refresh_seconds
+    end
+  end
+
+  def render_dashboard(options)
     data = Cli::DashboardDataLoader.new(
       client: @client,
       api_url: @base_url,
-      queue_slug: queue_slug,
+      queue_slug: options.fetch(:queue),
       limit: options[:limit],
       status: options[:status]
     ).call
-    @stdout.puts Cli::DashboardRenderer.new(data: data).render
+    Cli::DashboardRenderer.new(data: data).render
   end
 
   def get(path)
