@@ -31,6 +31,7 @@ module Api
         item = work_item
         metadata = item.metadata.merge("human_answer" => params.require(:answer))
         metadata.delete("blocked_reason")
+        metadata.delete("escalation")
         item.update!(status: :pending, metadata: metadata)
         item.transition_logs.create!(from_stage: item.stage_name, to_stage: item.stage_name, trigger: "human_answer", details: { answer: params[:answer] })
 
@@ -68,10 +69,11 @@ module Api
           stage_name: item.stage_name,
           status: item.status,
           tags: item.tags,
-          metadata: item.metadata,
+          metadata: safe_metadata(item),
           retry_count: item.retry_count,
           regression_count: item.regression_count,
-          active_claim: active_claim_summary(item)
+          active_claim: active_claim_summary(item),
+          escalation: escalation_summary(item)
         }
       end
 
@@ -85,6 +87,22 @@ module Api
           status: claim.status,
           async_execution: claim.async_execution,
           external_id: claim.assignment.dig("async", "external_id")
+        }
+      end
+
+      def safe_metadata(item)
+        item.metadata.except("escalation")
+      end
+
+      def escalation_summary(item)
+        escalation = item.metadata["escalation"]
+        return nil unless item.blocked? && escalation.present?
+
+        {
+          target: escalation["target"],
+          reason: escalation["reason"] || item.metadata["blocked_reason"],
+          question: escalation["question"],
+          human_action_required: escalation.fetch("human_action_required", item.blocked?)
         }
       end
     end

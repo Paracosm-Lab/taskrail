@@ -62,15 +62,70 @@ RSpec.describe "Workflow API", type: :request do
     expect(response.parsed_body.fetch("active_claim").fetch("external_id")).to eq("run-123")
   end
 
+  it "includes a safe escalation summary for blocked work items" do
+    queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[build done])
+    plain_item = WorkItem.create!(work_queue: queue, title: "Plain", spec_url: "opaque spec", stage_name: "build")
+    blocked_item = WorkItem.create!(
+      work_queue: queue,
+      title: "Blocked",
+      spec_url: "opaque spec",
+      stage_name: "build",
+      status: :blocked,
+      metadata: {
+        "blocked_reason" => "tests_passed missing",
+        "escalation" => {
+          "target" => "human",
+          "question" => "Please advise",
+          "human_action_required" => true,
+          "prompt" => "do not expose"
+        }
+      }
+    )
+
+    get "/api/v1/work_items", params: { queue: queue.slug }
+    expect(response).to have_http_status(:ok)
+    listed_blocked = response.parsed_body.fetch("work_items").find { |item| item.fetch("id") == blocked_item.id }
+    listed_plain = response.parsed_body.fetch("work_items").find { |item| item.fetch("id") == plain_item.id }
+    expect(listed_blocked.fetch("escalation")).to eq(
+      "target" => "human",
+      "reason" => "tests_passed missing",
+      "question" => "Please advise",
+      "human_action_required" => true
+    )
+    expect(listed_plain.fetch("escalation")).to be_nil
+    expect(listed_blocked.to_json).not_to include("do not expose")
+
+    get "/api/v1/work_items/#{blocked_item.id}"
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body.fetch("escalation").fetch("target")).to eq("human")
+  end
+
   it "answers, retries, and cancels work items" do
     queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[intake build done])
-    work_item = WorkItem.create!(work_queue: queue, title: "Blocked", spec_url: "opaque spec", stage_name: "build", status: :blocked, metadata: { "blocked_reason" => "Need token" })
+    work_item = WorkItem.create!(
+      work_queue: queue,
+      title: "Blocked",
+      spec_url: "opaque spec",
+      stage_name: "build",
+      status: :blocked,
+      metadata: {
+        "blocked_reason" => "Need token",
+        "escalation" => {
+          "target" => "human",
+          "reason" => "Need token",
+          "question" => "Which token?",
+          "human_action_required" => true
+        }
+      }
+    )
 
     post "/api/v1/work_items/#{work_item.id}/answer", params: { answer: "Use bearer tokens" }
     expect(response).to have_http_status(:ok)
     expect(work_item.reload).to be_pending
     expect(work_item.metadata["human_answer"]).to eq("Use bearer tokens")
     expect(work_item.metadata).not_to have_key("blocked_reason")
+    expect(work_item.metadata).not_to have_key("escalation")
+    expect(response.parsed_body.fetch("escalation")).to be_nil
 
     work_item.update!(status: :blocked, metadata: { "blocked_reason" => "Retry manually" })
     post "/api/v1/work_items/#{work_item.id}/retry"
