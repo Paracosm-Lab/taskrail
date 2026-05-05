@@ -1,5 +1,23 @@
 module Engine
   class TransitionManager
+    def self.advance_waiting_parent(work_item)
+      return unless work_item.waiting?
+      return unless work_item.children.any?
+      return unless work_item.children.all?(&:completed?)
+
+      from_stage = work_item.stage_name
+      stages = work_item.work_queue.stages
+      to_stage = stages.fetch(stages.index(from_stage) + 1)
+
+      work_item.update!(stage_name: to_stage, status: :pending)
+      work_item.transition_logs.create!(
+        from_stage: from_stage,
+        to_stage: to_stage,
+        trigger: "children_completed",
+        details: { children_count: work_item.children.count }
+      )
+    end
+
     def initialize(work_item:, claim:, stage_config:)
       @work_item = work_item
       @claim = claim
@@ -8,6 +26,7 @@ module Engine
 
     def call
       results = predicate_results
+      return decompose if results.all?(&:passed?) && decompose_children.any?
       return advance if results.all?(&:passed?)
       return regress_or_block_review if review_regression_requested?
 
@@ -45,6 +64,42 @@ module Engine
       stages = @work_item.work_queue.stages
       current_index = stages.index(@work_item.stage_name)
       stages.fetch(current_index + 1)
+    end
+
+    def decompose
+      from_stage = @work_item.stage_name
+      child_stage = next_stage
+
+      decompose_children.each_with_index do |child, index|
+        @work_item.children.create!(
+          work_queue: @work_item.work_queue,
+          title: child.fetch("title"),
+          spec_url: child.fetch("spec_url", @work_item.spec_url),
+          stage_name: child_stage,
+          status: :pending,
+          position: index,
+          tags: child.fetch("tags", {})
+        )
+      end
+
+      @work_item.update!(status: :waiting)
+
+      @work_item.transition_logs.create!(
+        from_stage: from_stage,
+        to_stage: child_stage,
+        trigger: "rule_satisfied",
+        details: { criteria: @stage_config.completion_criteria, children_count: decompose_children.count }
+      )
+    end
+
+    def decompose_children
+      return [] unless @work_item.stage_name == "decompose"
+
+      decompose_report&.body&.fetch("children", []) || []
+    end
+
+    def decompose_report
+      @decompose_report ||= @claim.reports.where(stage_name: "decompose").order(created_at: :desc).first
     end
 
     def retry_or_block(results)
