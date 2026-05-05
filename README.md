@@ -45,11 +45,13 @@ bin/rails db:prepare
 bin/rails db:seed
 ```
 
-The seed task loads the development queue from:
+The seed task loads every queue YAML file from:
 
 ```text
-config/queues/development.yml
+config/queues/*.yml
 ```
+
+The default `development` queue remains fully fake-backed. The optional `development-shell` queue uses `ShellScriptAdapter` for the `test` stage so shell-produced evidence can satisfy queue-owned transition predicates.
 
 Seeds are intended to be idempotent.
 
@@ -133,7 +135,6 @@ bin/stupidclaw cancel WORK_ITEM_ID
 ## Fake workflow smoke test
 
 With the database prepared and seeded:
-
 ```bash
 bin/rails runner 'queue = WorkQueue.find_by!(slug: "development"); item = WorkItem.create!(work_queue: queue, title: "Smoke test", spec_url: "opaque spec", stage_name: queue.stages.first); 40.times { Engine::Runner.new.call; break if item.reload.completed? }; puts({ id: item.id, status: item.status, stage: item.stage_name }.to_json)'
 ```
@@ -143,6 +144,53 @@ Expected output includes:
 ```json
 {"status":"completed","stage":"done"}
 ```
+
+## ShellScriptAdapter
+
+`ShellScriptAdapter` is the first real, non-fake adapter. It is intended for deterministic validation stages where the queue should execute local shell commands and convert their results into normal StupidClaw artifacts.
+
+The seeded `development-shell` queue keeps intake, decompose, build, review, and done fake-backed, but uses `shell_script` for the `test` stage:
+
+```bash
+bin/stupidclaw stages development-shell
+```
+
+A shell-backed stage config looks like:
+
+```yaml
+adapter_type: shell_script
+adapter_config:
+  working_directory: /path/to/project
+  commands:
+    - name: rspec
+      command: bundle exec rspec
+      artifact: test_results
+    - name: rubocop
+      command: bundle exec rubocop
+      artifact: lint
+    - name: coverage
+      command: ruby -e 'exit 0'
+      artifact: coverage
+      previous_coverage: 90.0
+      current_coverage: 91.0
+```
+
+Supported artifact mappings:
+
+- `artifact: test_results` stores `kind: test_results` with `data.passed` based on command exit status.
+- `artifact: lint` stores `kind: lint` with `data.clean` based on command exit status.
+- `artifact: coverage` stores `kind: coverage` with `data.current` and `data.previous` from the command config.
+- Commands without an `artifact` are collected into an aggregate `test_results` artifact.
+
+Each configured command also writes a `shell_command` trace event with command name, command text, output summary, duration, and exit status. The work item advances only after the adapter result satisfies queue-owned transition rules; the adapter does not choose the next stage.
+
+Smoke-test only the shell-backed test stage:
+
+```bash
+bin/rails runner 'queue = WorkQueue.find_by!(slug: "development-shell"); item = WorkItem.create!(work_queue: queue, title: "Shell smoke", spec_url: "opaque spec", stage_name: "test"); Engine::Runner.new.call; puts({ id: item.id, status: item.reload.status, stage: item.stage_name, artifacts: item.artifacts.pluck(:kind) }.to_json)'
+```
+
+Expected output includes `"stage":"review"` and artifact kinds `test_results`, `lint`, and `coverage`.
 
 ## Tests
 
