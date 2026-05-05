@@ -1,0 +1,107 @@
+name: Migration Safety Check
+slug: migration_safety
+stages:
+  - scan_impact
+  - enumerate_risks
+  - draft_rollback
+  - test_rollback
+  - draft_runbook
+  - human_review
+  - done
+config:
+  default_max_retries: 2
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 2
+stage_configs:
+  scan_impact:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy, mutate_database]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [impact_mapped]
+    agent_prompt: file://cookbooks/prompts/migration_safety/scan_impact.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: impact_map
+      fixture_app: cookbooks/fixtures/apps/migration_safety_app
+  enumerate_risks:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy, mutate_database]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [risks_enumerated]
+    agent_prompt: file://cookbooks/prompts/migration_safety/enumerate_risks.md
+    timeout_seconds: 600
+    adapter_config:
+      input_artifact_kind: impact_map
+      output_artifact_kind: risk_assessment
+      fixture_app: cookbooks/fixtures/apps/migration_safety_app
+  draft_rollback:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy, mutate_database]
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria: [rollback_drafted]
+    agent_prompt: file://cookbooks/prompts/migration_safety/draft_rollback.md
+    timeout_seconds: 600
+    adapter_config:
+      input_artifact_kind: risk_assessment
+      output_artifact_kind: rollback_plan
+      fixture_app: cookbooks/fixtures/apps/migration_safety_app
+  test_rollback:
+    adapter_type: docker_compose
+    allowed_skills: [execute_staging]
+    forbidden_skills: [deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [rollback_tested]
+    agent_prompt: file://cookbooks/prompts/migration_safety/test_rollback.md
+    timeout_seconds: 1200
+    adapter_config:
+      input_artifact_kind: rollback_plan
+      output_artifact_kind: rollback_test_results
+      fixture_app: cookbooks/fixtures/apps/migration_safety_app
+      compose_file: cookbooks/docker-compose.yml
+      commands:
+        - name: migration-safety-rollback-fixture
+          command: ruby cookbooks/fixtures/apps/migration_safety_app/scripts/run_rollback_test.rb
+          artifact: rollback_test_results
+  draft_runbook:
+    adapter_type: inline_claude
+    model_override: claude-opus-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy, mutate_database]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: file://cookbooks/prompts/migration_safety/draft_runbook.md
+    timeout_seconds: 600
+    adapter_config:
+      input_artifact_kind: rollback_test_results
+      output_artifact_kind: migration_runbook
+      fixture_app: cookbooks/fixtures/apps/migration_safety_app
+  human_review:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Review migration impact map, risk assessment, rollback proof, and runbook before production cutover.
+    timeout_seconds: 86400
+  done:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60

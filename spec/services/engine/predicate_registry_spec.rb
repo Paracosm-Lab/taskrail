@@ -51,6 +51,10 @@ RSpec.describe Engine::PredicateRegistry do
     expect(described_class.resolve("dependencies_mapped")).to eq(Engine::Predicates::DependenciesMapped)
     expect(described_class.resolve("risk_assessed")).to eq(Engine::Predicates::RiskAssessed)
     expect(described_class.resolve("rotation_planned")).to eq(Engine::Predicates::RotationPlanned)
+    expect(described_class.resolve("impact_mapped")).to eq(Engine::Predicates::ImpactMapped)
+    expect(described_class.resolve("risks_enumerated")).to eq(Engine::Predicates::RisksEnumerated)
+    expect(described_class.resolve("rollback_drafted")).to eq(Engine::Predicates::RollbackDrafted)
+    expect(described_class.resolve("rollback_tested")).to eq(Engine::Predicates::RollbackTested)
   end
 
   it "raises for unknown predicate names" do

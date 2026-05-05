@@ -48,7 +48,11 @@ module Engine
       "secrets_scanned" => Predicates::SecretsScanned,
       "dependencies_mapped" => Predicates::DependenciesMapped,
       "risk_assessed" => Predicates::RiskAssessed,
-      "rotation_planned" => Predicates::RotationPlanned
+      "rotation_planned" => Predicates::RotationPlanned,
+      "impact_mapped" => Predicates::ImpactMapped,
+      "risks_enumerated" => Predicates::RisksEnumerated,
+      "rollback_drafted" => Predicates::RollbackDrafted,
+      "rollback_tested" => Predicates::RollbackTested
     }.freeze
 
     def self.resolve(name)

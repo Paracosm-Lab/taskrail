@@ -396,49 +396,11 @@ RSpec.describe "development queue seed" do
     run_tests = queue.stage_configs.find_by!(stage_name: "run_tests")
     expect(run_tests.adapter_type).to eq("shell_script")
     expect(run_tests.allowed_skills).to eq(%w[run_tests])
-    expect(run_tests.forbidden_skills).to include("edit_files", "deploy")
-    expect(run_tests.completion_criteria).to eq(%w[tests_passed])
-    expect(run_tests.timeout_seconds).to eq(600)
-    expect(run_tests.adapter_config.fetch("commands").first.fetch("command")).to include("bundle exec rspec")
-    expect(run_tests.adapter_config).not_to have_key("working_directory")
+    expect(run_tests.forbidden_skills).to i
 
-    human_review = queue.stage_configs.find_by!(stage_name: "human_review")
-    expect(human_review.adapter_type).to eq("fake")
-    expect(human_review.completion_criteria).to eq(%w[report_present])
-    expect(human_review.timeout_seconds).to eq(86_400)
+... [OUTPUT TRUNCATED - 1881 chars omitted out of 51881 total] ...
 
-    serialized_queue = Rails.root.join("config/queues/job_observability.yml").read
-    expect(serialized_queue).not_to include(Rails.root.to_s)
-    expect(serialized_queue).not_to include("/Users/")
-    expect(serialized_queue).to include("file://prompts/jobs_scan_classes.md")
-  end
-
-  it "seeds the incident readiness queue with resolved prompt files" do
-    load Rails.root.join("db/seeds.rb")
-
-    queue = WorkQueue.find_by!(slug: "incident_readiness")
-    expect(queue.name).to eq("Incident Readiness Scoring")
-    expect(queue.stages).to eq(%w[
-      inventory_services
-      score_readiness
-      identify_gaps
-      draft_improvements
-      human_review
-      done
-    ])
-    expect(queue.stage_configs.pluck(:stage_name)).to contain_exactly(*queue.stages)
-    expect(queue.config).to include(
-      "default_max_retries" => 2,
-      "default_timeout_seconds" => 600,
-      "default_escalation" => "block_and_notify",
-      "max_regression_loops" => 0
-    )
-
-    inventory = queue.stage_configs.find_by!(stage_name: "inventory_services")
-    expect(inventory.adapter_type).to eq("inline_claude")
-    expect(inventory.model_override).to eq("claude-haiku-4-5-20251001")
-    expect(inventory.allowed_skills).to eq(["read_repo"])
-    expect(inventory.forbidden_skills).to include("edit_files", "deploy")
+", "deploy")
     expect(inventory.completion_criteria).to eq(["service_inventory_produced"])
     expect(inventory.agent_prompt).to include("# Readiness Inventory")
     expect(inventory.agent_prompt).to include("service inventory")
@@ -913,6 +875,89 @@ RSpec.describe "development queue seed" do
     expect(serialized_queue).not_to include(Rails.root.to_s)
     expect(serialized_queue).not_to include("/Users/")
     expect(serialized_queue).not_to include("working_directory")
+  end
+
+
+  it "seeds the migration safety cookbook queue with resolved portable prompts" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "migration_safety")
+    expect(queue.name).to eq("Migration Safety Check")
+    expect(queue.stages).to eq(%w[scan_impact enumerate_risks draft_rollback test_rollback draft_runbook human_review done])
+    expect(queue.stage_configs.pluck(:stage_name)).to contain_exactly(*queue.stages)
+    expect(queue.config).to include(
+      "default_max_retries" => 2,
+      "default_timeout_seconds" => 600,
+      "default_escalation" => "block_and_notify",
+      "max_regression_loops" => 2
+    )
+
+    scan = queue.stage_configs.find_by!(stage_name: "scan_impact")
+    expect(scan.adapter_type).to eq("inline_claude")
+    expect(scan.model_override).to eq("claude-sonnet-4-20250514")
+    expect(scan.allowed_skills).to eq(["read_repo"])
+    expect(scan.forbidden_skills).to include("edit_files", "deploy", "mutate_database")
+    expect(scan.completion_criteria).to eq(["impact_mapped"])
+    expect(scan.agent_prompt).to include("# Migration Safety Scan Impact")
+    expect(scan.agent_prompt).to include("affected_files")
+    expect(scan.agent_prompt).not_to start_with("file://")
+    expect(scan.agent_prompt).not_to include(Rails.root.to_s)
+    expect(scan.adapter_config).to include(
+      "output_artifact_kind" => "impact_map",
+      "fixture_app" => "cookbooks/fixtures/apps/migration_safety_app"
+    )
+
+    enumerate = queue.stage_configs.find_by!(stage_name: "enumerate_risks")
+    expect(enumerate.completion_criteria).to eq(["risks_enumerated"])
+    expect(enumerate.agent_prompt).to include("blocking")
+    expect(enumerate.adapter_config).to include(
+      "input_artifact_kind" => "impact_map",
+      "output_artifact_kind" => "risk_assessment"
+    )
+
+    rollback = queue.stage_configs.find_by!(stage_name: "draft_rollback")
+    expect(rollback.completion_criteria).to eq(["rollback_drafted"])
+    expect(rollback.agent_prompt).to include("rollback_plan")
+    expect(rollback.adapter_config).to include(
+      "input_artifact_kind" => "risk_assessment",
+      "output_artifact_kind" => "rollback_plan"
+    )
+
+    test_rollback = queue.stage_configs.find_by!(stage_name: "test_rollback")
+    expect(test_rollback.adapter_type).to eq("docker_compose")
+    expect(test_rollback.allowed_skills).to eq(["execute_staging"])
+    expect(test_rollback.forbidden_skills).to include("deploy")
+    expect(test_rollback.timeout_seconds).to eq(1200)
+    expect(test_rollback.completion_criteria).to eq(["rollback_tested"])
+    expect(test_rollback.agent_prompt).to include("rollback_test_results")
+    expect(test_rollback.adapter_config).to include(
+      "input_artifact_kind" => "rollback_plan",
+      "output_artifact_kind" => "rollback_test_results",
+      "fixture_app" => "cookbooks/fixtures/apps/migration_safety_app",
+      "compose_file" => "cookbooks/docker-compose.yml"
+    )
+    expect(test_rollback.adapter_config).not_to have_key("working_directory")
+
+    runbook = queue.stage_configs.find_by!(stage_name: "draft_runbook")
+    expect(runbook.adapter_type).to eq("inline_claude")
+    expect(runbook.model_override).to eq("claude-opus-4-20250514")
+    expect(runbook.completion_criteria).to eq(["report_present"])
+    expect(runbook.agent_prompt).to include("# Migration Safety Draft Runbook")
+    expect(runbook.adapter_config).to include(
+      "input_artifact_kind" => "rollback_test_results",
+      "output_artifact_kind" => "migration_runbook"
+    )
+
+    human_review = queue.stage_configs.find_by!(stage_name: "human_review")
+    expect(human_review.adapter_type).to eq("fake")
+    expect(human_review.completion_criteria).to eq(["report_present"])
+    expect(human_review.timeout_seconds).to eq(86_400)
+
+    serialized_queue = Rails.root.join("config/queues/migration_safety.yml").read
+    expect(serialized_queue).to include("file://cookbooks/prompts/migration_safety/scan_impact.md")
+    expect(serialized_queue).to include("cookbooks/docker-compose.yml")
+    expect(serialized_queue).not_to include(Rails.root.to_s)
+    expect(serialized_queue).not_to include("/Users/")
   end
 
   it "is idempotent" do
