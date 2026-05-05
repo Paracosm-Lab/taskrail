@@ -84,6 +84,9 @@ RSpec.describe Cli::DashboardRenderer do
     output = described_class.new(data: data).render
 
     expect(output).to include("HUMAN: Tests failed. Provide guidance.")
+    expect(output).to include("Actions")
+    expect(output).to include("1 blocked item needs a human answer.")
+    expect(output).to include("Run: bin/stupidclaw answer WORK_ITEM_ID \"your guidance\"")
     expect(output).not_to include("\e")
     expect(output).not_to include("Tests failed.\nProvide guidance")
   end

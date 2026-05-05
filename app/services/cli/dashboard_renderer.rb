@@ -12,6 +12,7 @@ module Cli
         header,
         stages_section,
         work_items_section,
+        actions_section,
         costs_section
       ].join("\n")
     end
@@ -54,6 +55,19 @@ module Cli
       TEXT
     end
 
+    def actions_section
+      count = human_action_items.count
+      return nil if count.zero?
+
+      noun = count == 1 ? "item" : "items"
+      verb = count == 1 ? "needs" : "need"
+      <<~TEXT.chomp
+        Actions
+        #{count} blocked #{noun} #{verb} a human answer.
+        Run: bin/stupidclaw answer WORK_ITEM_ID "your guidance"
+      TEXT
+    end
+
     def truncate(value)
       text = value.to_s
       return text if text.length <= TITLE_LIMIT
@@ -80,6 +94,12 @@ module Cli
 
       message = escalation["question"] || escalation["reason"] || "action required"
       "HUMAN: #{truncate(cell(message))}"
+    end
+
+    def human_action_items
+      data.work_items.select do |item|
+        item.fetch("status", "") == "blocked" && item.dig("escalation", "human_action_required")
+      end
     end
 
     def cell(value)
