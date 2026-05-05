@@ -12,7 +12,11 @@ RSpec.describe Engine::AssignmentBuilder do
       timeout_seconds: 600,
       model_override: "fake-model",
       agent_prompt: "Classify this",
-      adapter_type: "fake"
+      adapter_type: "shell_script",
+      adapter_config: {
+        "working_directory" => Rails.root.to_s,
+        "commands" => [{ "name" => "rspec", "command" => "bundle exec rspec" }]
+      }
     )
     work_item = WorkItem.create!(
       work_queue: queue,
@@ -32,7 +36,17 @@ RSpec.describe Engine::AssignmentBuilder do
     expect(assignment[:claim_id]).to eq(claim.id)
     expect(assignment[:callback_url]).to include("/api/v1/claims/#{claim.id}/report")
     expect(assignment[:work_item]).to include(id: work_item.id, title: "Classify thing", spec_url: "opaque-spec", tags: { "risk" => "low" }, parent_id: nil)
-    expect(assignment[:stage]).to include(name: "intake", allowed_skills: ["read_spec"], forbidden_skills: ["deploy"], completion_criteria: ["report_present"])
+    expect(assignment[:stage]).to include(
+      name: "intake",
+      adapter_type: "shell_script",
+      adapter_config: {
+        "working_directory" => Rails.root.to_s,
+        "commands" => [{ "name" => "rspec", "command" => "bundle exec rspec" }]
+      },
+      allowed_skills: ["read_spec"],
+      forbidden_skills: ["deploy"],
+      completion_criteria: ["report_present"]
+    )
     expect(assignment[:prompt]).to eq("Classify this")
     expect(assignment[:model]).to eq("fake-model")
     expect(assignment[:context][:spec_content]).to eq("opaque-spec")

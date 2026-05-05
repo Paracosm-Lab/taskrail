@@ -34,6 +34,8 @@ module Engine
     def stage_payload
       {
         name: @stage_config.stage_name,
+        adapter_type: @stage_config.adapter_type,
+        adapter_config: @stage_config.adapter_config,
         allowed_skills: @stage_config.allowed_skills,
         forbidden_skills: @stage_config.forbidden_skills,
         completion_criteria: @stage_config.completion_criteria
