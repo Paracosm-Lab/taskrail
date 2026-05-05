@@ -2,9 +2,8 @@
 # frozen_string_literal: true
 
 require "json"
-require "net/http"
 require "optparse"
-require "uri"
+require_relative "../app/services/cli/stupid_claw_api_client"
 
 class StupidClawCli
   def initialize(argv, env = ENV, stdout = $stdout, stderr = $stderr)
@@ -12,6 +11,7 @@ class StupidClawCli
     @base_url = env.fetch("STUPIDCLAW_API_URL", "http://localhost:3000")
     @stdout = stdout
     @stderr = stderr
+    @client = Cli::StupidClawApiClient.new(base_url: @base_url)
   end
 
   def run
@@ -32,7 +32,7 @@ class StupidClawCli
     end
 
     0
-  rescue KeyError, ArgumentError => error
+  rescue KeyError, ArgumentError, Cli::StupidClawApiClient::HttpError => error
     @stderr.puts error.message
     1
   end
@@ -72,20 +72,14 @@ class StupidClawCli
   end
 
   def get(path)
-    uri = URI.join(@base_url, path)
-    print_response(Net::HTTP.get_response(uri))
+    print_response(@client.get_json(path))
   end
 
   def post(path, body)
-    uri = URI.join(@base_url, path)
-    request = Net::HTTP::Post.new(uri)
-    request["Content-Type"] = "application/json"
-    request.body = JSON.dump(body)
-    print_response(Net::HTTP.start(uri.hostname, uri.port) { |http| http.request(request) })
+    print_response(@client.post_json(path, body))
   end
 
-  def print_response(response)
-    parsed = JSON.parse(response.body)
+  def print_response(parsed)
     @stdout.puts JSON.pretty_generate(parsed)
   end
 
