@@ -23,8 +23,9 @@ MVP-0 includes:
 - End-to-end fake workflow coverage
 - Deterministic shell validation adapter for local test/lint/coverage evidence
 - Optional inline Claude CLI adapter for local intake/decompose/review experiments
+- Optional async Codex CLI adapter for local build/fix experiments
 
-MVP-0 still keeps the default `development` queue fake-backed. Real model adapters are opt-in queue fixtures, and Codex/async build adapters remain future work.
+MVP-0 still keeps the default `development` queue fake-backed. Real model adapters are opt-in queue fixtures; queue-owned transitions remain the source of truth for stage movement.
 
 ## Requirements
 
@@ -53,7 +54,7 @@ The seed task loads every queue YAML file from:
 config/queues/*.yml
 ```
 
-The default `development` queue remains fully fake-backed. The optional `development-shell` queue uses `ShellScriptAdapter` for the `test` stage so shell-produced evidence can satisfy queue-owned transition predicates.
+The default `development` queue remains fully fake-backed. The optional `development-shell` queue uses `ShellScriptAdapter` for the `test` stage, `development-claude` uses `InlineClaudeAdapter` for intake/decompose/review, and `development-codex` adds async Codex build/fix submission plus shell validation.
 
 Seeds are intended to be idempotent.
 
@@ -235,6 +236,67 @@ bin/rails runner 'queue = WorkQueue.find_by!(slug: "development-claude"); WorkIt
 ```
 
 Expected output includes `"stage":"decompose"` after the intake report satisfies the queue-owned `report_present` transition rule.
+
+## CodexAdapter
+
+`CodexAdapter` starts build/fix work asynchronously through a configured local Codex CLI command. It is intended for longer-running implementation stages where StupidClaw should submit work, keep the claim active, and poll for completion later.
+
+The default `development` queue remains fake-backed. The optional `development-codex` queue uses:
+
+- `inline_claude` for intake, decompose, and review
+- `codex` for build
+- `shell_script` for test validation
+- `fake` for done
+
+Configure Codex CLI authentication outside StupidClaw. Do not commit API keys, tokens, or credentials into queue YAML.
+
+```bash
+bin/stupidclaw stages development-codex
+```
+
+A Codex build stage config looks like:
+
+```yaml
+adapter_type: codex
+model_override: codex-cli
+completion_criteria:
+  - branch_created
+  - report_present
+adapter_config:
+  command: codex
+  args:
+    - exec
+    - --json
+  poll_command: codex
+  poll_args:
+    - status
+    - --json
+```
+
+Runtime behavior:
+
+1. `Engine::Runner` creates a claim and calls `CodexAdapter`.
+2. `CodexAdapter` builds a deterministic build/fix prompt from the assignment and submits it to the configured Codex command on stdin.
+3. A successful submit returns an external id and stores async metadata on the claim.
+4. The claim remains `active` with `async_execution: true`; the work item does not transition yet.
+5. `CheckAsyncClaimsJob` runs `Engine::AsyncClaimChecker`, which polls Codex with the configured poll command and external id.
+6. A running poll result leaves the claim active.
+7. A completed poll result is normalized into reports, artifacts, and `codex_complete` trace events.
+8. Only after completion does StupidClaw mark the claim complete and run queue-owned transition rules.
+
+Smoke-test only the Codex-backed build stage with a real local Codex CLI. This blocks older pending items first because `Engine::Runner` processes the oldest runnable pending item:
+
+```bash
+bin/rails runner 'queue = WorkQueue.find_by!(slug: "development-codex"); WorkItem.pending.update_all(status: WorkItem.statuses[:blocked]); item = WorkItem.create!(work_queue: queue, title: "Codex smoke", spec_url: "opaque spec", stage_name: "build"); Engine::Runner.new.call; claim = item.claims.order(:created_at).last; puts({ id: item.id, status: item.reload.status, stage: item.stage_name, claim_status: claim.status, async_execution: claim.async_execution, external_id: claim.assignment.dig("async", "external_id") }.to_json)'
+```
+
+Expected output after submission includes `"stage":"build"`, `"claim_status":"active"`, and `"async_execution":true`. Run the async checker after Codex completes:
+
+```bash
+bin/rails runner 'CheckAsyncClaimsJob.perform_now'
+```
+
+If Codex polling returns a completed result with a branch artifact and report evidence, queue-owned transition rules can then advance the work item from `build` to `test`.
 
 ## Tests
 
