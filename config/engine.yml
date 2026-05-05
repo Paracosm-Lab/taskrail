@@ -1,0 +1,5 @@
+# config/engine.yml
+pipes:
+  max_depth: 3
+  max_children_per_pipe: 5
+  enabled: true
