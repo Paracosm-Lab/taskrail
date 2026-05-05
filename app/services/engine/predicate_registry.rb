@@ -20,7 +20,9 @@ module Engine
       "docs_validated" => Predicates::DocsValidated,
       "query_inventory_produced" => Predicates::QueryInventoryProduced,
       "query_analyzed" => Predicates::QueryAnalyzed,
-      "query_fixes_drafted" => Predicates::QueryFixesDrafted
+      "query_fixes_drafted" => Predicates::QueryFixesDrafted,
+      "job_inventory_produced" => Predicates::JobInventoryProduced,
+      "observability_assessed" => Predicates::ObservabilityAssessed
     }.freeze
 
     def self.resolve(name)

@@ -1,0 +1,83 @@
+name: Background Job Observability
+slug: job_observability
+stages:
+  - scan_job_classes
+  - assess_observability
+  - draft_fixes
+  - run_tests
+  - human_review
+  - done
+config:
+  default_max_retries: 2
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 2
+stage_configs:
+  scan_job_classes:
+    adapter_type: inline_claude
+    model_override: claude-haiku-4-5-20251001
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [job_inventory_produced]
+    agent_prompt: file://prompts/jobs_scan_classes.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: job_inventory
+  assess_observability:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [observability_assessed]
+    agent_prompt: file://prompts/jobs_assess_observability.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: observability_assessment
+  draft_fixes:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy]
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria: [fixes_drafted]
+    agent_prompt: file://prompts/jobs_draft_fixes.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: job_patches
+  run_tests:
+    adapter_type: shell_script
+    allowed_skills: [run_tests]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [tests_passed]
+    agent_prompt: Apply generated job instrumentation patches, run the focused fixture specs, then run the relevant application test suite. Report pass/fail with command output.
+    timeout_seconds: 600
+    adapter_config:
+      commands:
+        - name: job_observability_fixture_specs
+          command: PATH="$HOME/.rbenv/shims:$HOME/.rbenv/bin:$PATH" bundle exec rspec spec/system/job_observability_cookbook_spec.rb
+          artifact: test_results
+  human_review:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Review job observability inventory, scorecard, and drafted patches before applying them to production code.
+    timeout_seconds: 86400
+  done:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60
