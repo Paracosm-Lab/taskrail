@@ -10,7 +10,7 @@ module Engine
       results = predicate_results
       return advance if results.all?(&:passed?)
 
-      results
+      retry_or_block(results)
     end
 
     private
@@ -44,6 +44,49 @@ module Engine
       stages = @work_item.work_queue.stages
       current_index = stages.index(@work_item.stage_name)
       stages.fetch(current_index + 1)
+    end
+
+    def retry_or_block(results)
+      reasons = results.reject(&:passed?).map(&:reason).compact
+
+      if @work_item.retry_count < max_retries
+        retry_with_feedback(reasons)
+      else
+        block_with_reasons(reasons)
+      end
+    end
+
+    def retry_with_feedback(reasons)
+      @work_item.update!(
+        status: :pending,
+        retry_count: @work_item.retry_count + 1,
+        metadata: @work_item.metadata.merge("feedback" => reasons.join("; "))
+      )
+
+      @work_item.transition_logs.create!(
+        from_stage: @work_item.stage_name,
+        to_stage: @work_item.stage_name,
+        trigger: "retry",
+        details: { reasons: reasons, retry_count: @work_item.retry_count }
+      )
+    end
+
+    def block_with_reasons(reasons)
+      @work_item.update!(
+        status: :blocked,
+        metadata: @work_item.metadata.merge("blocked_reason" => reasons.join("; "))
+      )
+
+      @work_item.transition_logs.create!(
+        from_stage: @work_item.stage_name,
+        to_stage: @work_item.stage_name,
+        trigger: "blocked",
+        details: { reasons: reasons, retry_count: @work_item.retry_count }
+      )
+    end
+
+    def max_retries
+      @stage_config.max_retries || @work_item.work_queue.config["default_max_retries"] || 3
     end
   end
 end
