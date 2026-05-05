@@ -63,24 +63,32 @@ RSpec.describe "Workflow API", type: :request do
       agent_type: "codex",
       status: :active,
       async_execution: true,
+      last_heartbeat_at: 1.minute.ago,
+      heartbeat_message: "codex run-123 running",
       assignment: { "async" => { "external_id" => "run-123", "prompt" => "do not expose" } }
     )
 
     get "/api/v1/work_items", params: { queue: queue.slug }
     expect(response).to have_http_status(:ok)
     listed_item = response.parsed_body.fetch("work_items").find { |item| item.fetch("id") == work_item.id }
-    expect(listed_item.fetch("active_claim")).to eq(
+    expect(listed_item.fetch("active_claim")).to include(
       "id" => claim.id,
       "agent_type" => "codex",
       "status" => "active",
       "async_execution" => true,
-      "external_id" => "run-123"
+      "external_id" => "run-123",
+      "heartbeat_message" => "codex run-123 running",
+      "heartbeat_stale" => false
     )
+    expect(listed_item.fetch("active_claim").fetch("last_heartbeat_at")).to be_present
     expect(listed_item.to_json).not_to include("do not expose")
 
     get "/api/v1/work_items/#{work_item.id}"
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body.fetch("active_claim").fetch("external_id")).to eq("run-123")
+    active_claim = response.parsed_body.fetch("active_claim")
+    expect(active_claim.fetch("external_id")).to eq("run-123")
+    expect(active_claim.fetch("heartbeat_message")).to eq("codex run-123 running")
+    expect(active_claim.fetch("heartbeat_stale")).to eq(false)
   end
 
   it "includes a safe escalation summary for blocked work items" do

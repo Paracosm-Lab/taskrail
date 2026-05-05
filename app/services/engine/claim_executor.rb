@@ -6,7 +6,8 @@ module Engine
       "fake" => Adapters::FakeAdapter,
       "shell_script" => Adapters::ShellScriptAdapter,
       "inline_claude" => Adapters::InlineClaudeAdapter,
-      "codex" => Adapters::CodexAdapter
+      "codex" => Adapters::CodexAdapter,
+      "docker_compose" => Adapters::DockerComposeAdapter
     }.freeze
 
     def initialize(claim:, stage_config:)

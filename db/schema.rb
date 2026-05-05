@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_05_000200) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_05_000300) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -36,6 +36,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_05_000200) do
     t.integer "timeout_seconds"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "last_heartbeat_at"
+    t.string "heartbeat_message"
     t.index ["work_item_id"], name: "index_claims_on_work_item_id"
   end
 

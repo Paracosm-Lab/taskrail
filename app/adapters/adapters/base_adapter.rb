@@ -11,5 +11,12 @@ module Adapters
     def cancel(_claim)
       nil
     end
+
+    def heartbeat(claim, message = nil)
+      claim.update_columns(
+        last_heartbeat_at: Time.current,
+        heartbeat_message: message
+      )
+    end
   end
 end

@@ -102,7 +102,10 @@ module Api
           agent_type: claim.agent_type,
           status: claim.status,
           async_execution: claim.async_execution,
-          external_id: claim.assignment.dig("async", "external_id")
+          external_id: claim.assignment.dig("async", "external_id"),
+          last_heartbeat_at: claim.last_heartbeat_at&.iso8601,
+          heartbeat_message: claim.heartbeat_message,
+          heartbeat_stale: claim.heartbeat_stale?
         }
       end
 
