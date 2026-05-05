@@ -54,6 +54,20 @@ The seed task loads every queue YAML file from:
 config/queues/*.yml
 ```
 
+### Dead Code Removal Cookbook
+
+The `dead_code_removal` queue scans for unused dependencies, unreferenced files, dead methods, orphan routes, no-op migrations, and abandoned feature flags.
+
+Pipeline:
+
+`scan_references -> verify_unused -> draft_removals -> run_tests -> human_review -> done`
+
+Safety:
+- `verify_unused` is intentionally conservative.
+- Dynamic Ruby references such as `send`, `public_send`, `const_get`, `constantize`, and `eval` should force `needs_investigation` unless the agent can prove the candidate is safe.
+- Only `safe_to_remove` items may become removal patches.
+- Human review remains mandatory before done.
+
 The default `development` queue remains fully fake-backed. The optional `development-shell` queue uses `ShellScriptAdapter` for the `test` stage, `development-claude` uses `InlineClaudeAdapter` for intake/decompose/review, and `development-codex` adds async Codex build/fix submission plus shell validation.
 
 Seeds are intended to be idempotent.

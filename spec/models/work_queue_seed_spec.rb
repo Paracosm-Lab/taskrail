@@ -96,6 +96,66 @@ RSpec.describe "development queue seed" do
     expect(staging_validation.adapter_config["compose_file"]).to eq("docker-compose.dev.yml")
   end
 
+  it "seeds the dead code removal cookbook queue with resolved portable prompts" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "dead_code_removal")
+    expect(queue.name).to eq("Dead Code Removal")
+    expect(queue.stages).to eq(%w[scan_references verify_unused draft_removals run_tests human_review done])
+    expect(queue.stage_configs.pluck(:stage_name)).to contain_exactly(*queue.stages)
+    expect(queue.config).to include(
+      "default_escalation" => "block_and_notify",
+      "max_regression_loops" => 2
+    )
+
+    scan = queue.stage_configs.find_by!(stage_name: "scan_references")
+    expect(scan.adapter_type).to eq("inline_claude")
+    expect(scan.model_override).to eq("claude-haiku-4-5-20251001")
+    expect(scan.allowed_skills).to eq(["read_repo"])
+    expect(scan.forbidden_skills).to include("edit_files", "deploy")
+    expect(scan.completion_criteria).to eq(["candidates_identified"])
+    expect(scan.agent_prompt).to include("# Dead Code Scan References")
+    expect(scan.agent_prompt).not_to start_with("file://")
+    expect(scan.agent_prompt).not_to include(Rails.root.to_s)
+    expect(scan.adapter_config).to include(
+      "output_artifact_kind" => "removal_candidates",
+      "fixture_app" => "cookbooks/fixtures/apps/dead_code_app"
+    )
+
+    verify = queue.stage_configs.find_by!(stage_name: "verify_unused")
+    expect(verify.model_override).to eq("claude-sonnet-4-20250514")
+    expect(verify.completion_criteria).to eq(["removals_verified"])
+    expect(verify.agent_prompt).to include("needs_investigation")
+    expect(verify.adapter_config).to include(
+      "output_artifact_kind" => "verified_removals",
+      "input_artifact_kind" => "removal_candidates",
+      "fixture_app" => "cookbooks/fixtures/apps/dead_code_app"
+    )
+
+    draft = queue.stage_configs.find_by!(stage_name: "draft_removals")
+    expect(draft.completion_criteria).to eq(["removals_drafted"])
+    expect(draft.agent_prompt).to include("safe_to_remove")
+    expect(draft.adapter_config).to include(
+      "output_artifact_kind" => "removal_patches",
+      "input_artifact_kind" => "verified_removals",
+      "fixture_app" => "cookbooks/fixtures/apps/dead_code_app"
+    )
+
+    run_tests = queue.stage_configs.find_by!(stage_name: "run_tests")
+    expect(run_tests.adapter_type).to eq("shell_script")
+    expect(run_tests.allowed_skills).to include("run_tests")
+    expect(run_tests.forbidden_skills).to include("edit_files", "deploy")
+    expect(run_tests.completion_criteria).to eq(["tests_passed"])
+    expect(run_tests.adapter_config).to include("output_artifact_kind" => "test_results")
+    expect(run_tests.adapter_config).not_to have_key("working_directory")
+
+    serialized_queue = Rails.root.join("config/queues/dead_code_removal.yml").read
+    expect(serialized_queue).not_to include(Rails.root.to_s)
+    expect(serialized_queue).not_to include("/Users/")
+    expect(serialized_queue).to include("file://cookbooks/prompts/dead_code_removal/scan_references.md")
+  end
+
+
   it "seeds the api docs sync queue with resolved prompt files" do
     load Rails.root.join("db/seeds.rb")
 

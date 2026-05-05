@@ -1,0 +1,12 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    rails (7.2.0)
+    unused_charting_gem (1.0.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  rails
+  unused_charting_gem

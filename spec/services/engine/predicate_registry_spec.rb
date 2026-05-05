@@ -16,6 +16,9 @@ RSpec.describe Engine::PredicateRegistry do
     expect(described_class.resolve("query_inventory_produced")).to eq(Engine::Predicates::QueryInventoryProduced)
     expect(described_class.resolve("query_analyzed")).to eq(Engine::Predicates::QueryAnalyzed)
     expect(described_class.resolve("query_fixes_drafted")).to eq(Engine::Predicates::QueryFixesDrafted)
+    expect(described_class.resolve("candidates_identified")).to eq(Engine::Predicates::CandidatesIdentified)
+    expect(described_class.resolve("removals_verified")).to eq(Engine::Predicates::RemovalsVerified)
+    expect(described_class.resolve("removals_drafted")).to eq(Engine::Predicates::RemovalsDrafted)
     expect(described_class.resolve("job_inventory_produced")).to eq(Engine::Predicates::JobInventoryProduced)
     expect(described_class.resolve("observability_assessed")).to eq(Engine::Predicates::ObservabilityAssessed)
   end

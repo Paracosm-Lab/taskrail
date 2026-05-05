@@ -1,0 +1,3 @@
+new_reports_ui:
+  status: removed
+  rollout: 100

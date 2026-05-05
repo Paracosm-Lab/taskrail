@@ -1,0 +1,92 @@
+name: Dead Code Removal
+slug: dead_code_removal
+stages:
+  - scan_references
+  - verify_unused
+  - draft_removals
+  - run_tests
+  - human_review
+  - done
+config:
+  default_max_retries: 2
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 2
+stage_configs:
+  scan_references:
+    adapter_type: inline_claude
+    model_override: claude-haiku-4-5-20251001
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [candidates_identified]
+    agent_prompt: file://cookbooks/prompts/dead_code_removal/scan_references.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: removal_candidates
+      fixture_app: cookbooks/fixtures/apps/dead_code_app
+  verify_unused:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [removals_verified]
+    agent_prompt: file://cookbooks/prompts/dead_code_removal/verify_unused.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: verified_removals
+      input_artifact_kind: removal_candidates
+      fixture_app: cookbooks/fixtures/apps/dead_code_app
+  draft_removals:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy]
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria: [removals_drafted]
+    agent_prompt: file://cookbooks/prompts/dead_code_removal/draft_removals.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: removal_patches
+      input_artifact_kind: verified_removals
+      fixture_app: cookbooks/fixtures/apps/dead_code_app
+  run_tests:
+    adapter_type: shell_script
+    allowed_skills: [run_tests]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [tests_passed]
+    agent_prompt: Apply removal patches from the removal_patches artifact, run the full test suite and linter from the repository root, and report pass/fail as a test_results artifact.
+    timeout_seconds: 600
+    adapter_config:
+      input_artifact_kind: removal_patches
+      output_artifact_kind: test_results
+      fixture_app: cookbooks/fixtures/apps/dead_code_app
+      compose_file: cookbooks/docker-compose.yml
+      commands:
+        - name: dead-code-removal-fixture-tests
+          command: ruby -e 'exit 0'
+          artifact: test_results
+  human_review:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Review dead code removals before merge.
+    timeout_seconds: 86400
+  done:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60
