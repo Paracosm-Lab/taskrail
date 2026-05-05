@@ -1,0 +1,17 @@
+services:
+  failure-api:
+    build: ./spec/fixtures/failure_readiness/staging/api
+    environment:
+      RACK_ENV: staging
+      DATABASE_HOST: failure-postgres
+    ports:
+      - "127.0.0.1:${FAILURE_READINESS_API_PORT:-3938}:9292"
+    depends_on:
+      - failure-postgres
+  failure-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: failure_readiness_staging
+    ports:
+      - "127.0.0.1:${FAILURE_READINESS_POSTGRES_PORT:-55438}:5432"

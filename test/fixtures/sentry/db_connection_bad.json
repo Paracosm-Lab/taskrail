@@ -8,8 +8,10 @@
   "environment": "staging",
   "tags": {
     "service": "crm-service",
+    "environment": "staging",
     "deployment": "kamal",
-    "region": "westus2"
+    "region": "westus2",
+    "database_host": "crm-postgres.internal"
   },
   "contexts": {
     "runtime": { "name": "ruby", "version": "3.3.0" },
@@ -40,6 +42,7 @@
         "stacktrace": {
           "frames": [
             { "filename": "vendor/bundle/ruby/3.3.0/gems/pg/lib/pg/connection.rb", "lineno": 772, "function": "connect_start", "in_app": false },
+            { "filename": "config/database.yml", "lineno": 14, "function": "primary", "in_app": true },
             { "filename": "app/models/customer.rb", "lineno": 19, "function": "find_for_sync", "in_app": true }
           ]
         }

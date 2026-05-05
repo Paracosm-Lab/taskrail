@@ -8,6 +8,7 @@
   "environment": "staging",
   "tags": {
     "service": "notification-service",
+    "environment": "staging",
     "deployment": "kamal",
     "region": "westus2",
     "job": "WeeklyDigestJob"
