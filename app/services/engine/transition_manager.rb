@@ -1,5 +1,7 @@
 module Engine
   class TransitionManager
+    class InvalidSpawnDefinition < StandardError; end
+
     def self.advance_waiting_parent(work_item)
       return unless work_item.waiting?
       return unless work_item.children.any?
@@ -46,18 +48,71 @@ module Engine
       to_stage = next_stage
       terminal = to_stage == "done"
 
-      @work_item.update!(
-        stage_name: to_stage,
-        status: terminal ? :completed : :pending,
-        retry_count: 0
-      )
+      ActiveRecord::Base.transaction do
+        @work_item.update!(
+          stage_name: to_stage,
+          status: terminal ? :completed : :pending,
+          retry_count: 0
+        )
+
+        @work_item.transition_logs.create!(
+          from_stage: from_stage,
+          to_stage: to_stage,
+          trigger: "rule_satisfied",
+          details: { criteria: @stage_config.completion_criteria }
+        )
+
+        spawn_cross_queue_items!(from_stage: from_stage)
+      end
+    end
+
+    def spawn_cross_queue_items!(from_stage:)
+      report = @claim.reports.success.where(stage_name: from_stage).order(created_at: :desc, id: :desc).first
+      spawn_items = normalized_spawn_items(report)
+      return if spawn_items.blank?
+
+      spawned_ids = spawn_items.map do |item_def|
+        target_queue = WorkQueue.find_by!(slug: item_def.fetch("queue_slug"))
+        title = item_def.fetch("title")
+
+        WorkItem.create!(
+          title: title,
+          spec_url: item_def["spec_url"].presence || "spawned://#{@work_item.id}/#{title.parameterize}",
+          work_queue: target_queue,
+          stage_name: target_queue.stages.first,
+          parent_id: @work_item.id,
+          tags: item_def.fetch("tags", {}).merge(
+            "source_queue" => @work_item.work_queue.slug,
+            "source_work_item" => @work_item.id
+          ),
+          metadata: item_def["spec_inline"].present? ? { "spec_inline" => item_def["spec_inline"] } : {}
+        ).id
+      end
 
       @work_item.transition_logs.create!(
         from_stage: from_stage,
-        to_stage: to_stage,
-        trigger: "rule_satisfied",
-        details: { criteria: @stage_config.completion_criteria }
+        to_stage: @work_item.stage_name,
+        trigger: "spawn",
+        details: {
+          spawned_count: spawn_items.length,
+          spawned_item_ids: spawned_ids,
+          target_queues: spawn_items.map { |item_def| item_def.fetch("queue_slug") }.uniq
+        }
       )
+    end
+
+    def normalized_spawn_items(report)
+      raw_items = report&.body&.fetch("spawn_work_items", []) || []
+      raise InvalidSpawnDefinition, "spawn_work_items must be an array" unless raw_items.is_a?(Array)
+
+      raw_items.map do |item_def|
+        raise InvalidSpawnDefinition, "spawn item must be an object" unless item_def.is_a?(Hash)
+        raise InvalidSpawnDefinition, "spawn item queue_slug is required" if item_def["queue_slug"].blank?
+        raise InvalidSpawnDefinition, "spawn item title is required" if item_def["title"].blank?
+        raise InvalidSpawnDefinition, "spawn item tags must be an object" unless item_def.fetch("tags", {}).is_a?(Hash)
+
+        item_def
+      end
     end
 
     def next_stage
