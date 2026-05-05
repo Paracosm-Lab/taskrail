@@ -96,6 +96,65 @@ RSpec.describe "development queue seed" do
     expect(staging_validation.adapter_config["compose_file"]).to eq("docker-compose.dev.yml")
   end
 
+  it "seeds the api docs sync queue with resolved prompt files" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "api_docs_sync")
+    expect(queue.name).to eq("API Documentation Sync")
+    expect(queue.stages).to eq(%w[
+      scan_endpoints
+      diff_existing_docs
+      draft_documentation
+      validate_examples
+      human_review
+      done
+    ])
+    expect(queue.stage_configs.pluck(:stage_name)).to contain_exactly(*queue.stages)
+    expect(queue.config).to include(
+      "default_escalation" => "block_and_notify",
+      "max_regression_loops" => 2
+    )
+
+    scan = queue.stage_configs.find_by!(stage_name: "scan_endpoints")
+    expect(scan.adapter_type).to eq("inline_claude")
+    expect(scan.model_override).to eq("claude-haiku-4-5-20251001")
+    expect(scan.allowed_skills).to eq(["read_repo"])
+    expect(scan.forbidden_skills).to include("edit_files", "deploy")
+    expect(scan.completion_criteria).to eq(["endpoint_inventory_produced"])
+    expect(scan.agent_prompt).to include("# API Docs Scan Endpoints")
+    expect(scan.agent_prompt).to include("endpoint_inventory")
+    expect(scan.agent_prompt).not_to start_with("file://")
+    expect(scan.adapter_config).to eq("output_artifact_kind" => "endpoint_inventory")
+
+    diff = queue.stage_configs.find_by!(stage_name: "diff_existing_docs")
+    expect(diff.adapter_type).to eq("inline_claude")
+    expect(diff.model_override).to eq("claude-sonnet-4-20250514")
+    expect(diff.completion_criteria).to eq(["docs_diff_produced"])
+    expect(diff.agent_prompt).to include("# API Docs Diff Existing Documentation")
+    expect(diff.adapter_config).to eq("output_artifact_kind" => "docs_diff")
+
+    draft = queue.stage_configs.find_by!(stage_name: "draft_documentation")
+    expect(draft.completion_criteria).to eq(["docs_drafted"])
+    expect(draft.agent_prompt).to include("# API Docs Draft Documentation")
+    expect(draft.adapter_config).to eq("output_artifact_kind" => "draft_docs")
+
+    validate = queue.stage_configs.find_by!(stage_name: "validate_examples")
+    expect(validate.adapter_type).to eq("shell_script")
+    expect(validate.completion_criteria).to eq(["docs_validated"])
+    expect(validate.allowed_skills).to include("run_validation")
+    expect(validate.adapter_config["output_artifact_kind"]).to eq("validation_results")
+
+    human_review = queue.stage_configs.find_by!(stage_name: "human_review")
+    expect(human_review.adapter_type).to eq("fake")
+    expect(human_review.timeout_seconds).to eq(86_400)
+
+    serialized_queue = Rails.root.join("config/queues/api_docs_sync.yml").read
+    expect(serialized_queue).not_to include(Rails.root.to_s)
+    expect(serialized_queue).not_to include("/Users/")
+    expect(serialized_queue).not_to include("working_directory:")
+    expect(serialized_queue).to include("file://prompts/docs_scan_endpoints.md")
+  end
+
   it "is idempotent" do
     2.times { load Rails.root.join("db/seeds.rb") }
 

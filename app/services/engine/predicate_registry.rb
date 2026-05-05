@@ -14,6 +14,10 @@ module Engine
       "runbook_mapped" => Predicates::RunbookMapped,
       "runbook_drafted" => Predicates::RunbookDrafted,
       "validation_passed" => Predicates::ValidationPassed,
+      "endpoint_inventory_produced" => Predicates::EndpointInventoryProduced,
+      "docs_diff_produced" => Predicates::DocsDiffProduced,
+      "docs_drafted" => Predicates::DocsDrafted,
+      "docs_validated" => Predicates::DocsValidated,
       "query_inventory_produced" => Predicates::QueryInventoryProduced,
       "query_analyzed" => Predicates::QueryAnalyzed,
       "query_fixes_drafted" => Predicates::QueryFixesDrafted

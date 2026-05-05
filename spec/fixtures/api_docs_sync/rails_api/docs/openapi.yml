@@ -1,0 +1,37 @@
+openapi: 3.1.0
+info:
+  title: Widget API
+  version: 1.0.0
+paths:
+  /api/v1/widgets:
+    get:
+      summary: List widgets
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Widget list
+  /api/v1/widgets/{id}:
+    get:
+      summary: Show widget with stale response field
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Widget detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  legacy_status:
+                    type: string
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

@@ -1,0 +1,85 @@
+name: API Documentation Sync
+slug: api_docs_sync
+stages:
+  - scan_endpoints
+  - diff_existing_docs
+  - draft_documentation
+  - validate_examples
+  - human_review
+  - done
+config:
+  default_max_retries: 2
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 2
+stage_configs:
+  scan_endpoints:
+    adapter_type: inline_claude
+    model_override: claude-haiku-4-5-20251001
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [endpoint_inventory_produced]
+    agent_prompt: file://prompts/docs_scan_endpoints.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: endpoint_inventory
+  diff_existing_docs:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [docs_diff_produced]
+    agent_prompt: file://prompts/docs_diff_existing.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: docs_diff
+  draft_documentation:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy]
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria: [docs_drafted]
+    agent_prompt: file://prompts/docs_draft.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: draft_docs
+  validate_examples:
+    adapter_type: shell_script
+    allowed_skills: [run_validation]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [docs_validated]
+    agent_prompt: Validate OpenAPI specs and request/response examples. Report validation_results with valid true only when all examples parse.
+    timeout_seconds: 300
+    adapter_config:
+      output_artifact_kind: validation_results
+      commands:
+        - name: validate_openapi_if_present
+          artifact: validation_results
+          command: |
+            ruby scripts/validate_api_docs_artifact.rb
+  human_review:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Review generated API documentation before publishing.
+    timeout_seconds: 86400
+  done:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60
