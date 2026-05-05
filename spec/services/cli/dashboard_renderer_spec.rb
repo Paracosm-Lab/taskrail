@@ -35,6 +35,32 @@ RSpec.describe Cli::DashboardRenderer do
     expect(output).to include("Tokens in/out: 10 / 20")
   end
 
+  it "renders active async claim summaries on work item rows" do
+    data = Cli::DashboardDataLoader::DashboardData.new(
+      api_url: "http://localhost:3000",
+      queue_slug: "development",
+      queue: {},
+      stages: [],
+      work_items: [{
+        "id" => 12,
+        "status" => "pending",
+        "stage_name" => "build",
+        "title" => "Codex smoke",
+        "active_claim" => {
+          "agent_type" => "codex",
+          "status" => "active",
+          "async_execution" => true,
+          "external_id" => "run-123"
+        }
+      }],
+      costs: {}
+    )
+
+    output = described_class.new(data: data).render
+
+    expect(output).to include("codex:active async run-123")
+  end
+
   it "renders an empty work item state" do
     data = Cli::DashboardDataLoader::DashboardData.new(
       api_url: "http://localhost:3000",

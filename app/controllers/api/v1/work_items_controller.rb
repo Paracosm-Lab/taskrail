@@ -70,7 +70,21 @@ module Api
           tags: item.tags,
           metadata: item.metadata,
           retry_count: item.retry_count,
-          regression_count: item.regression_count
+          regression_count: item.regression_count,
+          active_claim: active_claim_summary(item)
+        }
+      end
+
+      def active_claim_summary(item)
+        claim = item.claims.active.order(created_at: :desc).first
+        return nil unless claim
+
+        {
+          id: claim.id,
+          agent_type: claim.agent_type,
+          status: claim.status,
+          async_execution: claim.async_execution,
+          external_id: claim.assignment.dig("async", "external_id")
         }
       end
     end

@@ -39,7 +39,7 @@ module Cli
 
     def work_items_section
       rows = data.work_items.map do |item|
-        format("%-4s %-10s %-10s %s", cell(item.fetch("id", "")), cell(item.fetch("status", "")), cell(item.fetch("stage_name", "")), truncate(cell(item.fetch("title", ""))))
+        format("%-4s %-10s %-10s %s", cell(item.fetch("id", "")), cell(item.fetch("status", "")), cell(item.fetch("stage_name", "")), work_item_detail(item))
       end
       rows = ["No work items."] if rows.empty?
 
@@ -59,6 +59,21 @@ module Cli
       return text if text.length <= TITLE_LIMIT
 
       "#{text[0, TITLE_LIMIT - 1]}…"
+    end
+
+    def work_item_detail(item)
+      title = truncate(cell(item.fetch("title", "")))
+      claim = item["active_claim"]
+      return title unless claim
+
+      [title, active_claim_text(claim)].reject(&:empty?).join(" ")
+    end
+
+    def active_claim_text(claim)
+      parts = ["#{cell(claim.fetch("agent_type", ""))}:#{cell(claim.fetch("status", ""))}"]
+      parts << "async" if claim["async_execution"]
+      parts << cell(claim.fetch("external_id", ""))
+      parts.reject(&:empty?).join(" ")
     end
 
     def cell(value)

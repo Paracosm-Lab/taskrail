@@ -27,10 +27,39 @@ RSpec.describe "Workflow API", type: :request do
     get "/api/v1/work_items/#{id}"
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body.fetch("title")).to eq("Add calendar")
+    expect(response.parsed_body.fetch("active_claim")).to be_nil
 
     get "/api/v1/work_items", params: { queue: queue.slug, stage: "intake" }
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body.fetch("work_items").map { |item| item.fetch("id") }).to include(id)
+  end
+
+  it "includes a safe active claim summary for work items" do
+    queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[build done])
+    work_item = WorkItem.create!(work_queue: queue, title: "Codex smoke", spec_url: "opaque spec", stage_name: "build")
+    claim = Claim.create!(
+      work_item: work_item,
+      agent_type: "codex",
+      status: :active,
+      async_execution: true,
+      assignment: { "async" => { "external_id" => "run-123", "prompt" => "do not expose" } }
+    )
+
+    get "/api/v1/work_items", params: { queue: queue.slug }
+    expect(response).to have_http_status(:ok)
+    listed_item = response.parsed_body.fetch("work_items").find { |item| item.fetch("id") == work_item.id }
+    expect(listed_item.fetch("active_claim")).to eq(
+      "id" => claim.id,
+      "agent_type" => "codex",
+      "status" => "active",
+      "async_execution" => true,
+      "external_id" => "run-123"
+    )
+    expect(listed_item.to_json).not_to include("do not expose")
+
+    get "/api/v1/work_items/#{work_item.id}"
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body.fetch("active_claim").fetch("external_id")).to eq("run-123")
   end
 
   it "answers, retries, and cancels work items" do
