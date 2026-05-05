@@ -41,17 +41,37 @@ RSpec.describe "development queue seed" do
     expect(development.stage_configs.find_by!(stage_name: "intake").adapter_type).to eq("fake")
   end
 
+  it "seeds the codex-backed development queue" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "development-codex")
+    expect(queue.stage_configs.find_by!(stage_name: "intake").adapter_type).to eq("inline_claude")
+    expect(queue.stage_configs.find_by!(stage_name: "decompose").adapter_type).to eq("inline_claude")
+    build = queue.stage_configs.find_by!(stage_name: "build")
+    expect(build.adapter_type).to eq("codex")
+    expect(build.adapter_config["command"]).to eq("codex")
+    expect(build.adapter_config["poll_command"]).to eq("codex")
+    expect(queue.stage_configs.find_by!(stage_name: "test").adapter_type).to eq("shell_script")
+    expect(queue.stage_configs.find_by!(stage_name: "review").adapter_type).to eq("inline_claude")
+
+    development = WorkQueue.find_by!(slug: "development")
+    expect(development.stage_configs.find_by!(stage_name: "build").adapter_type).to eq("fake")
+  end
+
   it "is idempotent" do
     2.times { load Rails.root.join("db/seeds.rb") }
 
     queue = WorkQueue.find_by!(slug: "development")
     shell_queue = WorkQueue.find_by!(slug: "development-shell")
     claude_queue = WorkQueue.find_by!(slug: "development-claude")
+    codex_queue = WorkQueue.find_by!(slug: "development-codex")
     expect(WorkQueue.where(slug: "development").count).to eq(1)
     expect(WorkQueue.where(slug: "development-shell").count).to eq(1)
     expect(WorkQueue.where(slug: "development-claude").count).to eq(1)
+    expect(WorkQueue.where(slug: "development-codex").count).to eq(1)
     expect(queue.stage_configs.count).to eq(6)
     expect(shell_queue.stage_configs.count).to eq(6)
     expect(claude_queue.stage_configs.count).to eq(6)
+    expect(codex_queue.stage_configs.count).to eq(6)
   end
 end
