@@ -1,0 +1,83 @@
+name: Error Handling Audit
+slug: error_handling_audit
+stages:
+  - scan_error_handling
+  - classify_severity
+  - draft_fixes
+  - run_tests
+  - human_review
+  - done
+config:
+  default_max_retries: 2
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 3
+stage_configs:
+  scan_error_handling:
+    adapter_type: inline_claude
+    model_override: claude-haiku-4-5-20251001
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [error_patterns_found]
+    agent_prompt: file://prompts/audit_scan_error_handling.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: error_patterns
+  classify_severity:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [severity_classified]
+    agent_prompt: file://prompts/audit_classify_severity.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: severity_report
+  draft_fixes:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy]
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria: [fixes_drafted]
+    agent_prompt: file://prompts/audit_draft_fixes.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: fix_patches
+  run_tests:
+    adapter_type: shell_script
+    allowed_skills: [run_tests]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [tests_passed]
+    agent_prompt: Apply fix patches and run the bad error handling fixture smoke check. Report pass/fail with command output.
+    timeout_seconds: 600
+    adapter_config:
+      commands:
+        - name: error handling audit fixture smoke
+          artifact: test_results
+          command: ruby -c test/fixtures/apps/bad_error_handling/app/controllers/payments_controller.rb && ruby -c test/fixtures/apps/bad_error_handling/app/jobs/sync_job.rb && ruby -c test/fixtures/apps/bad_error_handling/app/services/external_api.rb
+  human_review:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Review error handling findings and drafted fixes before merge.
+    timeout_seconds: 86400
+  done:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60

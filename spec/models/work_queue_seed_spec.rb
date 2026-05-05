@@ -156,6 +156,74 @@ RSpec.describe "development queue seed" do
   end
 
 
+  it "seeds the error handling audit queue with resolved portable prompts" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "error_handling_audit")
+    expect(queue.name).to eq("Error Handling Audit")
+    expect(queue.stages).to eq(%w[
+      scan_error_handling
+      classify_severity
+      draft_fixes
+      run_tests
+      human_review
+      done
+    ])
+    expect(queue.stage_configs.pluck(:stage_name)).to contain_exactly(*queue.stages)
+    expect(queue.config).to include(
+      "default_escalation" => "block_and_notify",
+      "default_timeout_seconds" => 600,
+      "max_regression_loops" => 3
+    )
+
+    scan = queue.stage_configs.find_by!(stage_name: "scan_error_handling")
+    expect(scan.adapter_type).to eq("inline_claude")
+    expect(scan.model_override).to eq("claude-haiku-4-5-20251001")
+    expect(scan.allowed_skills).to eq(["read_repo"])
+    expect(scan.forbidden_skills).to include("edit_files", "deploy")
+    expect(scan.completion_criteria).to eq(["error_patterns_found"])
+    expect(scan.agent_prompt).to include("# Audit Scan Error Handling")
+    expect(scan.agent_prompt).to include("error_patterns")
+    expect(scan.agent_prompt).not_to start_with("file://")
+    expect(scan.agent_prompt).not_to include(Rails.root.to_s)
+    expect(scan.adapter_config).to eq("output_artifact_kind" => "error_patterns")
+
+    classify = queue.stage_configs.find_by!(stage_name: "classify_severity")
+    expect(classify.adapter_type).to eq("inline_claude")
+    expect(classify.model_override).to eq("claude-sonnet-4-20250514")
+    expect(classify.completion_criteria).to eq(["severity_classified"])
+    expect(classify.agent_prompt).to include("# Audit Classify Severity")
+    expect(classify.adapter_config).to eq("output_artifact_kind" => "severity_report")
+
+    draft = queue.stage_configs.find_by!(stage_name: "draft_fixes")
+    expect(draft.adapter_type).to eq("inline_claude")
+    expect(draft.completion_criteria).to eq(["fixes_drafted"])
+    expect(draft.agent_prompt).to include("# Audit Draft Fixes")
+    expect(draft.adapter_config).to eq("output_artifact_kind" => "fix_patches")
+
+    run_tests = queue.stage_configs.find_by!(stage_name: "run_tests")
+    expect(run_tests.adapter_type).to eq("shell_script")
+    expect(run_tests.allowed_skills).to include("run_tests")
+    expect(run_tests.forbidden_skills).to include("edit_files", "deploy")
+    expect(run_tests.completion_criteria).to eq(["tests_passed"])
+    expect(run_tests.adapter_config).not_to have_key("working_directory")
+    expect(run_tests.adapter_config.fetch("commands").first).to include(
+      "name" => "error handling audit fixture smoke",
+      "artifact" => "test_results"
+    )
+    expect(run_tests.adapter_config.fetch("commands").first.fetch("command")).to include("test/fixtures/apps/bad_error_handling")
+
+    human_review = queue.stage_configs.find_by!(stage_name: "human_review")
+    expect(human_review.adapter_type).to eq("fake")
+    expect(human_review.timeout_seconds).to eq(86_400)
+
+    serialized_queue = Rails.root.join("config/queues/error_handling_audit.yml").read
+    expect(serialized_queue).not_to include(Rails.root.to_s)
+    expect(serialized_queue).not_to include("/Users/")
+    expect(serialized_queue).not_to include("working_directory:")
+    expect(serialized_queue).to include("file://prompts/audit_scan_error_handling.md")
+  end
+
   it "seeds the api docs sync queue with resolved prompt files" do
     load Rails.root.join("db/seeds.rb")
 
