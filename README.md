@@ -1,24 +1,167 @@
-# README
+# StupidClaw
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+StupidClaw is a Rails-native workflow control plane for agent work.
 
-Things you may want to cover:
+The thesis is simple: the agent does not own the workflow; the queue owns the workflow. StupidClaw keeps stages, retries, review regressions, child decomposition, traces, reports, and transitions in explicit Rails records. Agents are replaceable workers behind narrow adapters.
 
-* Ruby version
+## MVP-0
 
-* System dependencies
+MVP-0 includes:
 
-* Configuration
+- Rails API app backed by PostgreSQL
+- Explicit `WorkQueue` and stage configuration records
+- `WorkItem`, `Claim`, `Report`, `Artifact`, `Trace`, `TraceEvent`, and `TransitionLog` records
+- Deterministic fake adapter for intake, decompose, build, test, and review stages
+- Queue-owned transition manager
+- Retry/blocking behavior
+- Review regression from `review` back to `build`
+- Decomposition into child work items
+- One-tick engine runner
+- ActiveJob wrappers
+- JSON API endpoints
+- Thin `bin/stupidclaw` CLI
+- End-to-end fake workflow coverage
 
-* Database creation
+MVP-0 intentionally excludes real Claude/Codex/model adapters. Those come after the fake workflow is boring and reliable.
 
-* Database initialization
+## Requirements
 
-* How to run the test suite
+- Ruby managed by rbenv
+- Rails 8.0.5
+- Docker / Docker Compose
+- PostgreSQL via the included `docker-compose.yml`
 
-* Services (job queues, cache servers, search engines, etc.)
+The local Compose file maps PostgreSQL to host port `5433` to avoid conflicts with other local Postgres instances.
 
-* Deployment instructions
+## Setup
 
-* ...
+From this directory:
+
+```bash
+eval "$(/opt/homebrew/bin/rbenv init - zsh)"
+bundle install
+docker compose up -d postgres
+bin/rails db:prepare
+bin/rails db:seed
+```
+
+The seed task loads the development queue from:
+
+```text
+config/queues/development.yml
+```
+
+Seeds are intended to be idempotent.
+
+## Run the API server
+
+```bash
+eval "$(/opt/homebrew/bin/rbenv init - zsh)"
+bin/rails server
+```
+
+The API defaults to:
+
+```text
+http://localhost:3000
+```
+
+## Run one engine tick
+
+```bash
+eval "$(/opt/homebrew/bin/rbenv init - zsh)"
+bin/rails runner 'Engine::Runner.new.call'
+```
+
+A tick does this:
+
+1. Advances waiting parents whose children are completed.
+2. Finds the first pending work item without an active claim.
+3. Matches it to the current stage adapter.
+4. Creates a claim.
+5. Executes the adapter inline for MVP-0.
+6. Persists report/artifacts/trace data.
+7. Applies queue-owned transition rules.
+
+## API
+
+Implemented endpoints:
+
+```text
+GET    /api/v1/queues
+GET    /api/v1/queues/:slug/stages
+POST   /api/v1/work_items
+GET    /api/v1/work_items/:id
+GET    /api/v1/work_items
+POST   /api/v1/work_items/:id/answer
+POST   /api/v1/work_items/:id/retry
+POST   /api/v1/work_items/:id/cancel
+GET    /api/v1/costs
+GET    /api/v1/costs/work_items/:id
+```
+
+Create a work item:
+
+```bash
+curl -s -X POST http://localhost:3000/api/v1/work_items \
+  -H 'Content-Type: application/json' \
+  -d '{"queue":"development","title":"Smoke test","spec_url":"./README.md"}'
+```
+
+List work items:
+
+```bash
+curl -s 'http://localhost:3000/api/v1/work_items?queue=development'
+```
+
+## CLI
+
+The CLI talks to the Rails API. The default API base URL is `http://localhost:3000`; override it with `STUPIDCLAW_API_URL`.
+
+```bash
+bin/stupidclaw queues
+bin/stupidclaw stages development
+bin/stupidclaw submit --queue development --spec ./README.md --title "Smoke test"
+bin/stupidclaw list --queue development
+bin/stupidclaw list --queue development --stage build
+bin/stupidclaw status WORK_ITEM_ID
+bin/stupidclaw answer WORK_ITEM_ID "Use bearer tokens"
+bin/stupidclaw retry WORK_ITEM_ID
+bin/stupidclaw cancel WORK_ITEM_ID
+```
+
+## Fake workflow smoke test
+
+With the database prepared and seeded:
+
+```bash
+bin/rails runner 'queue = WorkQueue.find_by!(slug: "development"); item = WorkItem.create!(work_queue: queue, title: "Smoke test", spec_url: "opaque spec", stage_name: queue.stages.first); 40.times { Engine::Runner.new.call; break if item.reload.completed? }; puts({ id: item.id, status: item.status, stage: item.stage_name }.to_json)'
+```
+
+Expected output includes:
+
+```json
+{"status":"completed","stage":"done"}
+```
+
+## Tests
+
+Run the full suite:
+
+```bash
+eval "$(/opt/homebrew/bin/rbenv init - zsh)"
+bundle exec rspec
+```
+
+The MVP-0 end-to-end fake workflow test is:
+
+```bash
+bundle exec rspec spec/services/engine/fake_workflow_integration_spec.rb
+```
+
+## Development notes
+
+- Keep adapters narrow: adapters return normalized `AgentResult`; transition logic belongs in engine services.
+- Use strict TDD for behavior changes.
+- Commit after each green slice.
+- Do not add real model adapters until fake workflow remains reliable.
