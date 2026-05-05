@@ -208,18 +208,28 @@ RSpec.describe "Workflow API", type: :request do
     expect(work_item.reload).to be_cancelled
   end
 
-  it "reports total and per-work-item costs" do
+  it "reports total, today, and per-work-item costs" do
     queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[intake done])
     work_item = WorkItem.create!(work_queue: queue, title: "Costly", spec_url: "opaque spec", stage_name: "intake")
     claim = Claim.create!(work_item: work_item, agent_type: "fake")
-    Trace.create!(claim: claim, work_item: work_item, stage_name: "intake", agent_type: "fake", total_tokens_in: 10, total_tokens_out: 20, total_cost_cents: 7)
+    today_trace = Trace.create!(claim: claim, work_item: work_item, stage_name: "intake", agent_type: "fake", total_tokens_in: 10, total_tokens_out: 20, total_cost_cents: 7)
+    old_trace = Trace.create!(claim: claim, work_item: work_item, stage_name: "intake", agent_type: "fake", total_tokens_in: 100, total_tokens_out: 200, total_cost_cents: 70)
+    old_trace.update_column(:created_at, 2.days.ago)
 
     get "/api/v1/costs"
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body.fetch("total_cost_cents")).to eq(7)
+    expect(response.parsed_body.fetch("total_cost_cents")).to eq(77)
+
+    get "/api/v1/costs", params: { period: "today" }
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body).to include(
+      "total_tokens_in" => today_trace.total_tokens_in,
+      "total_tokens_out" => today_trace.total_tokens_out,
+      "total_cost_cents" => today_trace.total_cost_cents
+    )
 
     get "/api/v1/costs/work_items/#{work_item.id}"
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body.fetch("total_tokens_out")).to eq(20)
+    expect(response.parsed_body.fetch("total_tokens_out")).to eq(220)
   end
 end

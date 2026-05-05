@@ -2,7 +2,10 @@ module Api
   module V1
     class CostsController < ApplicationController
       def index
-        render json: totals(Trace.all)
+        scope = Trace.all
+        scope = scope.where(created_at: Time.zone.today.beginning_of_day..) if params[:period] == "today"
+
+        render json: totals(scope)
       end
 
       def work_item

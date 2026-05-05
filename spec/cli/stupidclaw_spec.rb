@@ -69,7 +69,10 @@ RSpec.describe "bin/stupidclaw" do
         [["retry", "abc"], "POST", "/api/v1/work_items/abc/retry", nil],
         [["cancel", "abc"], "POST", "/api/v1/work_items/abc/cancel", nil],
         [["queues"], "GET", "/api/v1/queues", nil],
-        [["stages", "development"], "GET", "/api/v1/queues/development/stages", nil]
+        [["stages", "development"], "GET", "/api/v1/queues/development/stages", nil],
+        [["costs"], "GET", "/api/v1/costs", nil],
+        [["costs", "--today"], "GET", "/api/v1/costs", "period=today"],
+        [["costs", "--work-item", "abc/123"], "GET", "/api/v1/costs/work_items/abc%2F123", nil]
       ]
 
       commands.each do |args, expected_method, expected_path, expected_query|

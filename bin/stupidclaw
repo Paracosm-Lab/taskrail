@@ -30,6 +30,7 @@ class StupidClawCli
     when "queues" then get("/api/v1/queues")
     when "stages" then get("/api/v1/queues/#{required_arg("QUEUE")}/stages")
     when "dashboard" then dashboard
+    when "costs" then costs
     else
       @stderr.puts "unknown command: #{command}"
       return 1
@@ -84,6 +85,23 @@ class StupidClawCli
     id = required_arg("WORK_ITEM_ID")
     answer = required_arg("ANSWER")
     post("/api/v1/work_items/#{id}/answer", { answer: answer })
+  end
+
+  def costs
+    options = {}
+    OptionParser.new do |parser|
+      parser.on("--today") { options[:today] = true }
+      parser.on("--work-item WORK_ITEM_ID") { |value| options[:work_item_id] = value }
+    end.parse!(@argv)
+
+    if options[:work_item_id]
+      id = URI.encode_www_form_component(options[:work_item_id])
+      get("/api/v1/costs/work_items/#{id}")
+    elsif options[:today]
+      get("/api/v1/costs?period=today")
+    else
+      get("/api/v1/costs")
+    end
   end
 
   def dashboard
