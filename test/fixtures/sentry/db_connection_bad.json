@@ -1,0 +1,49 @@
+{
+  "event_id": "REPLACED_AT_SEND_TIME",
+  "timestamp": "REPLACED_AT_SEND_TIME",
+  "platform": "ruby",
+  "level": "error",
+  "logger": "rails",
+  "server_name": "scribbl-crm-2",
+  "environment": "staging",
+  "tags": {
+    "service": "crm-service",
+    "deployment": "kamal",
+    "region": "westus2"
+  },
+  "contexts": {
+    "runtime": { "name": "ruby", "version": "3.3.0" },
+    "os": { "name": "Linux", "version": "6.1.0" },
+    "database": { "system": "postgresql", "host": "crm-postgres.internal" }
+  },
+  "breadcrumbs": {
+    "values": [
+      {
+        "category": "db.connection",
+        "message": "Opening PostgreSQL connection to crm-postgres.internal:5432",
+        "level": "info",
+        "timestamp": "REPLACED_AT_SEND_TIME"
+      },
+      {
+        "category": "net",
+        "message": "ECONNREFUSED crm-postgres.internal:5432",
+        "level": "error",
+        "timestamp": "REPLACED_AT_SEND_TIME"
+      }
+    ]
+  },
+  "exception": {
+    "values": [
+      {
+        "type": "PG::ConnectionBad",
+        "value": "could not connect to server: Connection refused",
+        "stacktrace": {
+          "frames": [
+            { "filename": "vendor/bundle/ruby/3.3.0/gems/pg/lib/pg/connection.rb", "lineno": 772, "function": "connect_start", "in_app": false },
+            { "filename": "app/models/customer.rb", "lineno": 19, "function": "find_for_sync", "in_app": true }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "event_id": "REPLACED_AT_SEND_TIME",
+  "timestamp": "REPLACED_AT_SEND_TIME",
+  "platform": "ruby",
+  "level": "error",
+  "logger": "rails",
+  "server_name": "scribbl-crm-1",
+  "environment": "staging",
+  "tags": {
+    "service": "crm-service",
+    "deployment": "kamal",
+    "region": "westus2"
+  },
+  "contexts": {
+    "runtime": { "name": "ruby", "version": "3.3.0" },
+    "os": { "name": "Linux", "version": "6.1.0" },
+    "trace": { "trace_id": "4c79f60c11214eb38604f4ae0781bfb2", "span_id": "fa90fdead5f74052" }
+  },
+  "breadcrumbs": {
+    "values": [
+      {
+        "category": "db",
+        "message": "SELECT * FROM sessions WHERE token = ?",
+        "level": "info",
+        "timestamp": "REPLACED_AT_SEND_TIME"
+      },
+      {
+        "category": "rails.request",
+        "message": "POST /sessions",
+        "level": "info",
+        "timestamp": "REPLACED_AT_SEND_TIME"
+      }
+    ]
+  },
+  "request": {
+    "url": "https://crm.staging.scribbl.test/sessions",
+    "method": "POST"
+  },
+  "exception": {
+    "values": [
+      {
+        "type": "ActiveRecord::ConnectionTimeoutError",
+        "value": "could not obtain connection from pool within 5.000 seconds",
+        "stacktrace": {
+          "frames": [
+            { "filename": "lib/connection_pool.rb", "lineno": 118, "function": "checkout", "in_app": true },
+            { "filename": "app/controllers/sessions_controller.rb", "lineno": 42, "function": "create", "in_app": true }
+          ]
+        }
+      }
+    ]
+  }
+}

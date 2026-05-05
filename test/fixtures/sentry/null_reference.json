@@ -1,0 +1,50 @@
+{
+  "event_id": "REPLACED_AT_SEND_TIME",
+  "timestamp": "REPLACED_AT_SEND_TIME",
+  "platform": "ruby",
+  "level": "error",
+  "logger": "rails",
+  "server_name": "scribbl-notifications-1",
+  "environment": "staging",
+  "tags": {
+    "service": "notification-service",
+    "deployment": "kamal",
+    "region": "westus2",
+    "job": "WeeklyDigestJob"
+  },
+  "contexts": {
+    "runtime": { "name": "ruby", "version": "3.3.0" },
+    "os": { "name": "Linux", "version": "6.1.0" },
+    "sidekiq": { "queue": "mailers", "jid": "7d6cfb5a1b0b4a9f" }
+  },
+  "breadcrumbs": {
+    "values": [
+      {
+        "category": "job",
+        "message": "Performing WeeklyDigestJob user_id=8821",
+        "level": "info",
+        "timestamp": "REPLACED_AT_SEND_TIME"
+      },
+      {
+        "category": "mail",
+        "message": "Rendering weekly_digest_mailer",
+        "level": "info",
+        "timestamp": "REPLACED_AT_SEND_TIME"
+      }
+    ]
+  },
+  "exception": {
+    "values": [
+      {
+        "type": "NoMethodError",
+        "value": "undefined method 'email' for nil:NilClass",
+        "stacktrace": {
+          "frames": [
+            { "filename": "app/mailers/weekly_digest_mailer.rb", "lineno": 27, "function": "digest", "in_app": true },
+            { "filename": "app/jobs/weekly_digest_job.rb", "lineno": 14, "function": "perform", "in_app": true }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "event_id": "REPLACED_AT_SEND_TIME",
+  "timestamp": "REPLACED_AT_SEND_TIME",
+  "platform": "ruby",
+  "level": "error",
+  "logger": "rails",
+  "server_name": "scribbl-billing-1",
+  "environment": "staging",
+  "tags": {
+    "service": "billing-service",
+    "environment": "staging"
+  },
+  "exception": {
+    "values": [
+      {
+        "type": "HTTP::TimeoutError",
+        "value": "rate limit exceeded",
+        "stacktrace": {
+          "frames": [
+            { "filename": "app/services/payment_gateway.rb", "lineno": 88, "function": "charge", "in_app": true }
+          ]
+        }
+      }
+    ]
+  }
+}

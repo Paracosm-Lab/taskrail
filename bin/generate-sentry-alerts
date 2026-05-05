@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+FIXTURE_DIR="test/fixtures/sentry"
+DSN="${SENTRY_DSN:-}"
+DRY_RUN=0
+ALERT="all"
+COUNT=1
+
+usage() {
+  cat <<'USAGE'
+Usage: bin/generate-sentry-alerts [options]
+
+Options:
+  --alert NAME    Alert to generate: db-pool, db-conn, null-ref, rate-limit (default: all)
+  --dsn DSN       Sentry DSN. Defaults to $SENTRY_DSN
+  --dry-run       Print generated payloads without POSTing to Sentry
+  --count N       Number of events to generate for each selected alert (default: 1)
+  --help          Show this help
+USAGE
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --alert)
+      [[ $# -ge 2 ]] || { echo "--alert requires a value" >&2; exit 2; }
+      ALERT="$2"
+      shift 2
+      ;;
+    --dsn)
+      [[ $# -ge 2 ]] || { echo "--dsn requires a value" >&2; exit 2; }
+      DSN="$2"
+      shift 2
+      ;;
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
+    --count)
+      [[ $# -ge 2 ]] || { echo "--count requires a value" >&2; exit 2; }
+      COUNT="$2"
+      shift 2
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+if ! [[ "$COUNT" =~ ^[1-9][0-9]*$ ]]; then
+  echo "--count must be a positive integer" >&2
+  exit 2
+fi
+
+case "$ALERT" in
+  all)
+    ALERTS=(db-pool db-conn null-ref rate-limit)
+    ;;
+  db-pool|db-conn|null-ref|rate-limit)
+    ALERTS=("$ALERT")
+    ;;
+  *)
+    echo "Unknown alert: $ALERT" >&2
+    echo "Expected one of: db-pool, db-conn, null-ref, rate-limit" >&2
+    exit 2
+    ;;
+esac
+
+fixture_for_alert() {
+  case "$1" in
+    db-pool) echo "db_pool_timeout.json" ;;
+    db-conn) echo "db_connection_bad.json" ;;
+    null-ref) echo "null_reference.json" ;;
+    rate-limit) echo "rate_limit_thin.json" ;;
+  esac
+}
+
+if [[ -z "$DSN" && "$DRY_RUN" -ne 1 ]]; then
+  echo "SENTRY_DSN is required unless --dsn is provided" >&2
+  exit 2
+fi
+
+SENTRY_KEY=""
+PROJECT_ID=""
+STORE_URL=""
+if [[ -n "$DSN" ]]; then
+  if [[ "$DSN" =~ ^https?://([^@/]+)@([^/]+)/(.+)$ ]]; then
+    SENTRY_KEY="${BASH_REMATCH[1]}"
+    SENTRY_HOST="${BASH_REMATCH[2]}"
+    PROJECT_ID="${BASH_REMATCH[3]%%\?*}"
+    PROJECT_ID="${PROJECT_ID##*/}"
+    STORE_URL="https://${SENTRY_HOST}/api/${PROJECT_ID}/store/"
+  else
+    echo "Invalid Sentry DSN: $DSN" >&2
+    exit 2
+  fi
+fi
+
+json_escape() {
+  ruby -rjson -e 'print JSON.generate(ARGV.fetch(0))' "$1"
+}
+
+generate_uuid() {
+  if command -v uuidgen >/dev/null 2>&1; then
+    uuidgen | tr '[:upper:]' '[:lower:]' | tr -d '-'
+  else
+    ruby -rsecurerandom -e 'print SecureRandom.hex(16)'
+  fi
+}
+
+build_payload() {
+  local fixture_path="$1"
+  local event_id="$2"
+  local timestamp="$3"
+
+  ruby -rjson -e '
+    path, event_id, timestamp = ARGV
+    payload = JSON.parse(File.read(path))
+    payload["event_id"] = event_id
+    payload["timestamp"] = timestamp
+    if payload.dig("breadcrumbs", "values")
+      payload["breadcrumbs"]["values"].each { |breadcrumb| breadcrumb["timestamp"] = timestamp if breadcrumb.key?("timestamp") }
+    end
+    puts JSON.generate(payload)
+  ' "$fixture_path" "$event_id" "$timestamp"
+}
+
+for alert in "${ALERTS[@]}"; do
+  fixture_path="${FIXTURE_DIR}/$(fixture_for_alert "$alert")"
+  if [[ ! -f "$fixture_path" ]]; then
+    echo "Missing fixture: $fixture_path" >&2
+    exit 1
+  fi
+
+  for ((i = 1; i <= COUNT; i++)); do
+    event_id="$(generate_uuid)"
+    timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    payload="$(build_payload "$fixture_path" "$event_id" "$timestamp")"
+
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+      echo "Alert: $alert"
+      echo "Payload: $payload"
+    else
+      curl --fail --silent --show-error \
+        -X POST "$STORE_URL" \
+        -H "Content-Type: application/json" \
+        -H "X-Sentry-Auth: Sentry sentry_version=7, sentry_key=${SENTRY_KEY}" \
+        --data "$payload" >/dev/null
+      echo "Sent $alert event_id=$event_id"
+    fi
+  done
+done
