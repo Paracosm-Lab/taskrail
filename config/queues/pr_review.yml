@@ -1,0 +1,103 @@
+name: PR Review Pipeline
+slug: pr_review
+stages:
+  - run_checks
+  - security_scan
+  - coverage_check
+  - architectural_review
+  - human_review
+  - done
+config:
+  default_max_retries: 1
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 0
+  trigger: github_pull_request
+stage_configs:
+  run_checks:
+    adapter_type: shell_script
+    allowed_skills: [run_tests, run_linter]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [checks_passed]
+    agent_prompt: file://prompts/pr_run_checks.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: check_results
+      fixture_app: cookbooks/fixtures/apps/pr_review_app
+      compose_file: cookbooks/docker-compose.yml
+      commands:
+        - name: pr-review-fixture-lint
+          command: ruby -c cookbooks/fixtures/apps/pr_review_app/app/controllers/orders_controller.rb
+          artifact: lint
+        - name: pr-review-fixture-tests
+          command: ruby -e 'exit 0'
+          artifact: tests
+        - name: pr-review-fixture-build
+          command: ruby -e 'exit 0'
+          artifact: build
+  security_scan:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [security_reviewed]
+    agent_prompt: file://prompts/pr_security_scan.md
+    timeout_seconds: 600
+    adapter_config:
+      input_artifact_kind: check_results
+      output_artifact_kind: security_findings
+      spawn_target_queues: [error_handling_audit, development]
+  coverage_check:
+    adapter_type: shell_script
+    allowed_skills: [run_tests, run_coverage]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [coverage_checked]
+    agent_prompt: file://prompts/pr_coverage_check.md
+    timeout_seconds: 600
+    adapter_config:
+      input_artifact_kind: check_results
+      output_artifact_kind: coverage_report
+      fixture_app: cookbooks/fixtures/apps/pr_review_app
+      compose_file: cookbooks/docker-compose.yml
+      commands:
+        - name: pr-review-fixture-coverage
+          command: >-
+            ruby -e 'require "json"; puts({overall_delta: 0.0, changed_files: [{file: "app/controllers/orders_controller.rb", coverage_pct: 100, uncovered_lines: []}], new_files_without_tests: []}.to_json)'
+          artifact: coverage_report
+  architectural_review:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [review_verdict]
+    agent_prompt: file://prompts/pr_architectural_review.md
+    timeout_seconds: 600
+    adapter_config:
+      input_artifact_kinds: [security_findings, coverage_report]
+      output_artifact_kind: architecture_review
+  human_review:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Human reviewer sees check_results, security_findings, coverage_report, and architecture_review. Focus on business logic, product fit, and design tradeoffs.
+    timeout_seconds: 86400
+  done:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60

@@ -14,6 +14,14 @@ module Adapters
         test_result(assignment)
       when "review"
         review_result(assignment)
+      when "map_user_flows"
+        map_user_flows_result
+      when "identify_boundaries"
+        identify_boundaries_result
+      when "generate_tests"
+        generate_integration_tests_result
+      when "run_tests"
+        integration_run_tests_result
       else
         generic_result(stage_name)
       end
@@ -85,6 +93,90 @@ module Adapters
       AgentResult.success(
         report: { "summary" => "completed #{stage_name}" },
         trace_events: [trace_event("completed #{stage_name}")]
+      )
+    end
+
+    def map_user_flows_result
+      AgentResult.success(
+        report: { "summary" => "mapped StupidClaw self-integration flow" },
+        artifacts: [
+          {
+            "kind" => "user_flows",
+            "data" => {
+              "flows" => [
+                {
+                  "name" => "Create work item and advance",
+                  "entry_point" => "POST /api/v1/work_items",
+                  "steps" => [
+                    { "action" => "create work item", "service" => "Api::V1::WorkItemsController", "endpoint_or_method" => "create", "data_deps" => ["integration queue"] },
+                    { "action" => "run engine tick", "service" => "Engine::Runner", "endpoint_or_method" => "call", "data_deps" => ["pending work item"] }
+                  ],
+                  "expected_outcome" => "work item advances after predicates pass",
+                  "services_involved" => ["API", "Engine::Runner", "Adapters::FakeAdapter", "Engine::TransitionManager", "Database"]
+                }
+              ]
+            }
+          }
+        ],
+        trace_events: [trace_event("mapped integration user flows")]
+      )
+    end
+
+    def identify_boundaries_result
+      AgentResult.success(
+        report: { "summary" => "identified StupidClaw self-integration boundaries" },
+        artifacts: [
+          {
+            "kind" => "boundary_map",
+            "data" => {
+              "flows" => [
+                {
+                  "name" => "Create work item and advance",
+                  "boundaries" => [
+                    { "from" => "HTTP client", "to" => "Api::V1::WorkItemsController", "contract" => "creates pending work item", "stub_strategy" => "real request" },
+                    { "from" => "Engine::Runner", "to" => "Adapters::FakeAdapter", "contract" => "claim result includes reports/artifacts", "stub_strategy" => "fake adapter" },
+                    { "from" => "Engine::TransitionManager", "to" => "Engine::PredicateRegistry", "contract" => "artifacts satisfy criteria", "stub_strategy" => "real predicates" }
+                  ],
+                  "setup_data" => ["seeded queue", "pending work item"],
+                  "teardown" => "database cleanup"
+                }
+              ]
+            }
+          }
+        ],
+        trace_events: [trace_event("identified integration boundaries")]
+      )
+    end
+
+    def generate_integration_tests_result
+      AgentResult.success(
+        report: { "summary" => "generated integration specs" },
+        artifacts: [
+          {
+            "kind" => "integration_specs",
+            "data" => {
+              "specs" => [
+                {
+                  "path" => "spec/e2e/create_work_item_flow_spec.rb",
+                  "content" => "require \"rails_helper\"\n\nRSpec.describe \"create work item flow\" do\n  it \"advances\" do\n    expect(true).to be(true)\n  end\nend\n",
+                  "flow_name" => "Create work item and advance",
+                  "boundaries_tested" => ["API", "Engine", "Adapter", "Database"]
+                }
+              ]
+            }
+          }
+        ],
+        trace_events: [trace_event("generated integration specs")]
+      )
+    end
+
+    def integration_run_tests_result
+      AgentResult.success(
+        report: { "summary" => "integration specs passed" },
+        artifacts: [
+          { "kind" => "test_results", "data" => { "passed" => true, "command" => "bundle exec rspec spec/e2e/integration_tests_cookbook_spec.rb" } }
+        ],
+        trace_events: [trace_event("ran integration specs")]
       )
     end
 

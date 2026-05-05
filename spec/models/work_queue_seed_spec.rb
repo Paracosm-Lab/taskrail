@@ -124,7 +124,6 @@ RSpec.describe "development queue seed" do
     expect(done.completion_criteria).to eq(["report_present"])
   end
 
-
   it "seeds the operations queue with resolved prompt files" do
     load Rails.root.join("db/seeds.rb")
 
@@ -221,7 +220,6 @@ RSpec.describe "development queue seed" do
     expect(serialized_queue).not_to include("/Users/")
     expect(serialized_queue).to include("file://cookbooks/prompts/dead_code_removal/scan_references.md")
   end
-
 
   it "seeds the error handling audit queue with resolved portable prompts" do
     load Rails.root.join("db/seeds.rb")
@@ -396,11 +394,49 @@ RSpec.describe "development queue seed" do
     run_tests = queue.stage_configs.find_by!(stage_name: "run_tests")
     expect(run_tests.adapter_type).to eq("shell_script")
     expect(run_tests.allowed_skills).to eq(%w[run_tests])
-    expect(run_tests.forbidden_skills).to i
+    expect(run_tests.forbidden_skills).to include("edit_files", "deploy")
+    expect(run_tests.completion_criteria).to eq(%w[tests_passed])
+    expect(run_tests.timeout_seconds).to eq(600)
+    expect(run_tests.adapter_config.fetch("commands").first.fetch("command")).to include("bundle exec rspec")
+    expect(run_tests.adapter_config).not_to have_key("working_directory")
 
-... [OUTPUT TRUNCATED - 1881 chars omitted out of 51881 total] ...
+    human_review = queue.stage_configs.find_by!(stage_name: "human_review")
+    expect(human_review.adapter_type).to eq("fake")
+    expect(human_review.completion_criteria).to eq(%w[report_present])
+    expect(human_review.timeout_seconds).to eq(86_400)
 
-", "deploy")
+    serialized_queue = Rails.root.join("config/queues/job_observability.yml").read
+    expect(serialized_queue).not_to include(Rails.root.to_s)
+    expect(serialized_queue).not_to include("/Users/")
+    expect(serialized_queue).to include("file://prompts/jobs_scan_classes.md")
+  end
+
+  it "seeds the incident readiness queue with resolved prompt files" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "incident_readiness")
+    expect(queue.name).to eq("Incident Readiness Scoring")
+    expect(queue.stages).to eq(%w[
+      inventory_services
+      score_readiness
+      identify_gaps
+      draft_improvements
+      human_review
+      done
+    ])
+    expect(queue.stage_configs.pluck(:stage_name)).to contain_exactly(*queue.stages)
+    expect(queue.config).to include(
+      "default_max_retries" => 2,
+      "default_timeout_seconds" => 600,
+      "default_escalation" => "block_and_notify",
+      "max_regression_loops" => 0
+    )
+
+    inventory = queue.stage_configs.find_by!(stage_name: "inventory_services")
+    expect(inventory.adapter_type).to eq("inline_claude")
+    expect(inventory.model_override).to eq("claude-haiku-4-5-20251001")
+    expect(inventory.allowed_skills).to eq(["read_repo"])
+    expect(inventory.forbidden_skills).to include("edit_files", "deploy")
     expect(inventory.completion_criteria).to eq(["service_inventory_produced"])
     expect(inventory.agent_prompt).to include("# Readiness Inventory")
     expect(inventory.agent_prompt).to include("service inventory")
@@ -818,6 +854,196 @@ RSpec.describe "development queue seed" do
     expect(serialized_queue).not_to include("/Users/")
   end
 
+  it "seeds the PR review pipeline queue with resolved portable prompts" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "pr_review")
+    expect(queue.name).to eq("PR Review Pipeline")
+    expect(queue.stages).to eq(%w[run_checks security_scan coverage_check architectural_review human_review done])
+    expect(queue.stage_configs.pluck(:stage_name)).to contain_exactly(*queue.stages)
+    expect(queue.config).to include(
+      "default_max_retries" => 1,
+      "default_timeout_seconds" => 600,
+      "default_escalation" => "block_and_notify",
+      "max_regression_loops" => 0,
+      "trigger" => "github_pull_request"
+    )
+
+    run_checks = queue.stage_configs.find_by!(stage_name: "run_checks")
+    expect(run_checks.adapter_type).to eq("shell_script")
+    expect(run_checks.allowed_skills).to eq(%w[run_tests run_linter])
+    expect(run_checks.forbidden_skills).to include("edit_files", "deploy")
+    expect(run_checks.completion_criteria).to eq(%w[checks_passed])
+    expect(run_checks.agent_prompt).to include("# PR Review: Run Checks")
+    expect(run_checks.agent_prompt).to include("check_results")
+    expect(run_checks.agent_prompt).not_to start_with("file://")
+    expect(run_checks.agent_prompt).not_to include(Rails.root.to_s)
+    expect(run_checks.adapter_config).to include(
+      "output_artifact_kind" => "check_results",
+      "fixture_app" => "cookbooks/fixtures/apps/pr_review_app",
+      "compose_file" => "cookbooks/docker-compose.yml"
+    )
+    expect(run_checks.adapter_config.fetch("commands").map { |command| command.fetch("artifact") }).to include("lint", "tests", "build")
+
+    security = queue.stage_configs.find_by!(stage_name: "security_scan")
+    expect(security.adapter_type).to eq("inline_claude")
+    expect(security.model_override).to eq("claude-sonnet-4-20250514")
+    expect(security.completion_criteria).to eq(%w[security_reviewed])
+    expect(security.agent_prompt).to include("# PR Review: Security Scan")
+    expect(security.agent_prompt).to include("security_findings")
+    expect(security.agent_prompt).to include("spawn_work_items")
+    expect(security.adapter_config).to include("output_artifact_kind" => "security_findings", "input_artifact_kind" => "check_results")
+
+    coverage = queue.stage_configs.find_by!(stage_name: "coverage_check")
+    expect(coverage.adapter_type).to eq("shell_script")
+    expect(coverage.allowed_skills).to eq(%w[run_tests run_coverage])
+    expect(coverage.completion_criteria).to eq(%w[coverage_checked])
+    expect(coverage.agent_prompt).to include("# PR Review: Coverage Check")
+    expect(coverage.adapter_config).to include("output_artifact_kind" => "coverage_report")
+
+    architecture = queue.stage_configs.find_by!(stage_name: "architectural_review")
+    expect(architecture.adapter_type).to eq("inline_claude")
+    expect(architecture.model_override).to eq("claude-sonnet-4-20250514")
+    expect(architecture.completion_criteria).to eq(%w[review_verdict])
+    expect(architecture.agent_prompt).to include("# PR Review: Architectural Review")
+    expect(architecture.adapter_config).to include("output_artifact_kind" => "architecture_review")
+
+    human_review = queue.stage_configs.find_by!(stage_name: "human_review")
+    expect(human_review.adapter_type).to eq("fake")
+    expect(human_review.completion_criteria).to eq(%w[report_present])
+    expect(human_review.timeout_seconds).to eq(86_400)
+
+    done = queue.stage_configs.find_by!(stage_name: "done")
+    expect(done.adapter_type).to eq("fake")
+    expect(done.completion_criteria).to eq(%w[report_present])
+
+    serialized_queue = Rails.root.join("config/queues/pr_review.yml").read
+    expect(serialized_queue).not_to include(Rails.root.to_s)
+    expect(serialized_queue).not_to include("/Users/")
+    expect(serialized_queue).not_to include("working_directory:")
+    expect(serialized_queue).to include("file://prompts/pr_run_checks.md")
+  end
+
+
+  it "seeds the security scan queue with resolved portable prompts" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "security_scan")
+    expect(queue.name).to eq("Security Scan")
+    expect(queue.stages).to eq(%w[scan_vulnerabilities classify_severity draft_fixes run_tests human_review done])
+    expect(queue.stage_configs.pluck(:stage_name)).to contain_exactly(*queue.stages)
+    expect(queue.config).to include(
+      "default_max_retries" => 2,
+      "default_timeout_seconds" => 600,
+      "default_escalation" => "block_and_notify",
+      "max_regression_loops" => 2
+    )
+
+    scan = queue.stage_configs.find_by!(stage_name: "scan_vulnerabilities")
+    expect(scan.adapter_type).to eq("inline_claude")
+    expect(scan.model_override).to eq("claude-sonnet-4-20250514")
+    expect(scan.allowed_skills).to eq(%w[read_repo])
+    expect(scan.forbidden_skills).to include("edit_files", "deploy")
+    expect(scan.completion_criteria).to eq(%w[scan_completed])
+    expect(scan.agent_prompt).to include("# Security Scan: Scan Vulnerabilities")
+    expect(scan.agent_prompt).to include("vulnerability_scan")
+    expect(scan.agent_prompt).to include("SQL injection")
+    expect(scan.agent_prompt).to include("command injection")
+    expect(scan.agent_prompt).to include("hardcoded credentials")
+    expect(scan.agent_prompt).to include("CSRF")
+    expect(scan.agent_prompt).to include("bundler-audit")
+    expect(scan.agent_prompt).to include("severity")
+    expect(scan.agent_prompt).to include("exploitability")
+    expect(scan.agent_prompt).to include("Do not edit files")
+    expect(scan.agent_prompt).not_to start_with("file://")
+    expect(scan.agent_prompt).not_to include(Rails.root.to_s)
+    expect(scan.adapter_config).to include(
+      "output_artifact_kind" => "vulnerability_scan",
+      "fixture_app" => "test/fixtures/apps/vulnerable_security_app"
+    )
+    expect(scan.adapter_config.fetch("vulnerability_categories")).to include(
+      "injection", "auth", "xss", "secrets", "data_exposure", "csrf", "dependencies", "insecure_config"
+    )
+
+    classify = queue.stage_configs.find_by!(stage_name: "classify_severity")
+    expect(classify.adapter_type).to eq("inline_claude")
+    expect(classify.model_override).to eq("claude-sonnet-4-20250514")
+    expect(classify.completion_criteria).to eq(%w[severity_classified])
+    expect(classify.agent_prompt).to include("# Security Scan: Classify Severity")
+    expect(classify.agent_prompt).to include("false_positive")
+    expect(classify.agent_prompt).to include("blast radius")
+    expect(classify.agent_prompt).to include("actively exploitable")
+    expect(classify.agent_prompt).to include("critical")
+    expect(classify.agent_prompt).to include("false_positives_removed")
+    expect(classify.agent_prompt).to include("Group related vulnerabilities")
+    expect(classify.agent_prompt).not_to start_with("file://")
+    expect(classify.adapter_config).to include(
+      "input_artifact_kind" => "vulnerability_scan",
+      "output_artifact_kind" => "severity_report",
+      "fixture_app" => "test/fixtures/apps/vulnerable_security_app"
+    )
+
+    draft = queue.stage_configs.find_by!(stage_name: "draft_fixes")
+    expect(draft.adapter_type).to eq("inline_claude")
+    expect(draft.allowed_skills).to eq(%w[read_repo])
+    expect(draft.forbidden_skills).to eq(%w[deploy])
+    expect(draft.max_retries).to eq(2)
+    expect(draft.completion_criteria).to eq(%w[fixes_drafted])
+    expect(draft.agent_prompt).to include("# Security Scan: Draft Fixes")
+    expect(draft.agent_prompt).to include("credential_rotation")
+    expect(draft.agent_prompt).to include("dependency_upgrade")
+    expect(draft.agent_prompt).to include("critical and high")
+    expect(draft.agent_prompt).to include("parameterized queries")
+    expect(draft.agent_prompt).to include("remove `html_safe`")
+    expect(draft.agent_prompt).to include("environment variables")
+    expect(draft.agent_prompt).to include("before_action")
+    expect(draft.agent_prompt).to include("CSRF")
+    expect(draft.agent_prompt).to include("spawn")
+    expect(draft.adapter_config).to include(
+      "input_artifact_kind" => "severity_report",
+      "output_artifact_kind" => "fix_patches",
+      "patch_schema_name" => "security_patches"
+    )
+    expect(draft.adapter_config.fetch("spawn_targets")).to include(
+      "hardcoded_secrets" => "credential_rotation",
+      "insecure_dependencies" => "dependency_upgrade",
+      "systemic_auth" => "development"
+    )
+
+    run_tests = queue.stage_configs.find_by!(stage_name: "run_tests")
+    expect(run_tests.adapter_type).to eq("shell_script")
+    expect(run_tests.allowed_skills).to eq(%w[run_tests])
+    expect(run_tests.forbidden_skills).to include("edit_files", "deploy")
+    expect(run_tests.completion_criteria).to eq(%w[tests_passed])
+    expect(run_tests.adapter_config).to include("output_artifact_kind" => "test_results")
+    expect(run_tests.adapter_config).not_to have_key("working_directory")
+    expect(run_tests.adapter_config.fetch("commands")).to contain_exactly(
+      include(
+        "name" => "security scan fixture specs",
+        "artifact" => "test_results",
+        "command" => "PATH=\"$HOME/.rbenv/shims:$HOME/.rbenv/bin:$PATH\" bundle exec rspec spec/services/engine/security_scan_workflow_integration_spec.rb"
+      )
+    )
+
+    human_review = queue.stage_configs.find_by!(stage_name: "human_review")
+    expect(human_review.adapter_type).to eq("fake")
+    expect(human_review.completion_criteria).to eq(%w[report_present])
+    expect(human_review.timeout_seconds).to eq(86_400)
+    expect(human_review.agent_prompt).to include("security-experienced reviewer")
+
+    done = queue.stage_configs.find_by!(stage_name: "done")
+    expect(done.adapter_type).to eq("fake")
+    expect(done.completion_criteria).to eq(%w[report_present])
+
+    serialized_queue = Rails.root.join("config/queues/security_scan.yml").read
+    expect(serialized_queue).not_to include(Rails.root.to_s)
+    expect(serialized_queue).not_to include("/Users/")
+    expect(serialized_queue).not_to include("working_directory:")
+    expect(serialized_queue).to include("file://prompts/security_scan.md")
+    expect(serialized_queue).to include("file://prompts/security_classify.md")
+    expect(serialized_queue).to include("file://prompts/security_draft_fixes.md")
+  end
+
   it "seeds the credential rotation audit queue with resolved read-only prompts" do
     load Rails.root.join("db/seeds.rb")
 
@@ -976,4 +1202,203 @@ RSpec.describe "development queue seed" do
     expect(claude_queue.stage_configs.count).to eq(6)
     expect(codex_queue.stage_configs.count).to eq(6)
   end
+
+  it "seeds the dependency upgrade cookbook queue with resolved portable prompts" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "dependency_upgrade")
+    expect(queue.name).to eq("Dependency Upgrade")
+    expect(queue.stages).to eq(%w[
+      audit_dependencies
+      prioritize_upgrades
+      upgrade_one
+      run_tests
+      human_review
+      done
+    ])
+    expect(queue.stage_configs.pluck(:stage_name)).to contain_exactly(*queue.stages)
+    expect(queue.config).to include(
+      "default_max_retries" => 2,
+      "default_timeout_seconds" => 600,
+      "default_escalation" => "block_and_notify",
+      "max_regression_loops" => 3
+    )
+
+    audit = queue.stage_configs.find_by!(stage_name: "audit_dependencies")
+    expect(audit.adapter_type).to eq("shell_script")
+    expect(audit.model_override).to eq("claude-haiku-4-5-20251001")
+    expect(audit.allowed_skills).to eq(%w[read_repo run_audit])
+    expect(audit.forbidden_skills).to include("edit_files", "deploy")
+    expect(audit.completion_criteria).to eq(["audit_produced"])
+    expect(audit.timeout_seconds).to eq(300)
+    expect(audit.agent_prompt).to include("# Dependency Upgrade Audit")
+    expect(audit.agent_prompt).to include("dependency_audit")
+    expect(audit.agent_prompt).not_to start_with("file://")
+    expect(audit.adapter_config).to include(
+      "output_artifact_kind" => "dependency_audit",
+      "fixture_app" => "cookbooks/fixtures/apps/dependency_upgrade"
+    )
+    expect(audit.adapter_config.fetch("commands")).to contain_exactly(
+      include(
+        "name" => "dependency audit fixture",
+        "command" => "ruby cookbooks/fixtures/apps/dependency_upgrade/bin/dependency-audit",
+        "artifact" => "dependency_audit"
+      )
+    )
+
+    prioritize = queue.stage_configs.find_by!(stage_name: "prioritize_upgrades")
+    expect(prioritize.adapter_type).to eq("inline_claude")
+    expect(prioritize.model_override).to eq("claude-sonnet-4-20250514")
+    expect(prioritize.completion_criteria).to eq(["upgrade_plan_produced"])
+    expect(prioritize.agent_prompt).to include("# Dependency Upgrade Prioritize")
+    expect(prioritize.agent_prompt).to include("spawn_work_items")
+    expect(prioritize.agent_prompt).not_to start_with("file://")
+    expect(prioritize.adapter_config).to include(
+      "input_artifact_kind" => "dependency_audit",
+      "output_artifact_kind" => "upgrade_plan",
+      "spawn_target_queue" => "development"
+    )
+
+    upgrade = queue.stage_configs.find_by!(stage_name: "upgrade_one")
+    expect(upgrade.adapter_type).to eq("inline_claude")
+    expect(upgrade.model_override).to eq("claude-sonnet-4-20250514")
+    expect(upgrade.allowed_skills).to eq(%w[read_repo edit_files])
+    expect(upgrade.forbidden_skills).to include("deploy")
+    expect(upgrade.completion_criteria).to eq(["upgrade_drafted"])
+    expect(upgrade.agent_prompt).to include("# Dependency Upgrade One")
+    expect(upgrade.agent_prompt).to include("upgrade_patches")
+    expect(upgrade.adapter_config).to include(
+      "input_artifact_kind" => "upgrade_plan",
+      "output_artifact_kind" => "upgrade_patches",
+      "fixture_app" => "cookbooks/fixtures/apps/dependency_upgrade",
+      "branch_prefix" => "dependency-upgrade"
+    )
+
+    run_tests = queue.stage_configs.find_by!(stage_name: "run_tests")
+    expect(run_tests.adapter_type).to eq("shell_script")
+    expect(run_tests.allowed_skills).to eq(["run_tests"])
+    expect(run_tests.forbidden_skills).to include("edit_files", "deploy")
+    expect(run_tests.completion_criteria).to eq(["tests_passed"])
+    expect(run_tests.adapter_config).to include(
+      "input_artifact_kind" => "upgrade_patches",
+      "output_artifact_kind" => "test_results",
+      "fixture_app" => "cookbooks/fixtures/apps/dependency_upgrade"
+    )
+    expect(run_tests.adapter_config).not_to have_key("working_directory")
+    expect(run_tests.adapter_config.fetch("commands")).to contain_exactly(
+      include(
+        "name" => "dependency upgrade fixture specs",
+        "artifact" => "test_results",
+        "command" => "PATH=\"$HOME/.rbenv/shims:$HOME/.rbenv/bin:$PATH\" bundle exec rspec spec/e2e/dependency_upgrade_cookbook_spec.rb"
+      )
+    )
+
+    human_review = queue.stage_configs.find_by!(stage_name: "human_review")
+    expect(human_review.adapter_type).to eq("fake")
+    expect(human_review.completion_criteria).to eq(["report_present"])
+    expect(human_review.timeout_seconds).to eq(86_400)
+
+    done = queue.stage_configs.find_by!(stage_name: "done")
+    expect(done.adapter_type).to eq("fake")
+    expect(done.completion_criteria).to eq(["report_present"])
+
+    serialized_queue = Rails.root.join("config/queues/dependency_upgrade.yml").read
+    expect(serialized_queue).not_to include(Rails.root.to_s)
+    expect(serialized_queue).not_to include(["", "Users", ""].join("/"))
+    expect(serialized_queue).to include("file://prompts/deps_audit.md")
+  end
+
+  it "seeds the integration test generator queue with resolved portable prompts" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "integration_tests")
+    expect(queue.name).to eq("Integration Test Generator")
+    expect(queue.stages).to eq(%w[
+      map_user_flows
+      identify_boundaries
+      generate_tests
+      run_tests
+      human_review
+      done
+    ])
+    expect(queue.stage_configs.pluck(:stage_name)).to contain_exactly(*queue.stages)
+    expect(queue.config).to include(
+      "default_max_retries" => 2,
+      "default_timeout_seconds" => 600,
+      "default_escalation" => "block_and_notify",
+      "max_regression_loops" => 3
+    )
+
+    map = queue.stage_configs.find_by!(stage_name: "map_user_flows")
+    expect(map.adapter_type).to eq("inline_claude")
+    expect(map.model_override).to eq("claude-sonnet-4-20250514")
+    expect(map.allowed_skills).to eq(["read_repo"])
+    expect(map.forbidden_skills).to include("edit_files", "deploy")
+    expect(map.max_retries).to eq(1)
+    expect(map.completion_criteria).to eq(["flows_mapped"])
+    expect(map.agent_prompt).to include("# Integration Tests: Map User Flows")
+    expect(map.agent_prompt).to include("user_flows")
+    expect(map.agent_prompt).not_to start_with("file://")
+    expect(map.agent_prompt).not_to include(Rails.root.to_s)
+    expect(map.adapter_config).to eq("output_artifact_kind" => "user_flows")
+
+    boundaries = queue.stage_configs.find_by!(stage_name: "identify_boundaries")
+    expect(boundaries.adapter_type).to eq("inline_claude")
+    expect(boundaries.model_override).to eq("claude-sonnet-4-20250514")
+    expect(boundaries.allowed_skills).to eq(["read_repo"])
+    expect(boundaries.forbidden_skills).to include("edit_files", "deploy")
+    expect(boundaries.max_retries).to eq(1)
+    expect(boundaries.completion_criteria).to eq(["boundaries_identified"])
+    expect(boundaries.agent_prompt).to include("# Integration Tests: Identify Boundaries")
+    expect(boundaries.agent_prompt).to include("boundary_map")
+    expect(boundaries.agent_prompt).not_to start_with("file://")
+    expect(boundaries.adapter_config).to eq("output_artifact_kind" => "boundary_map")
+
+    generate = queue.stage_configs.find_by!(stage_name: "generate_tests")
+    expect(generate.adapter_type).to eq("inline_claude")
+    expect(generate.model_override).to eq("claude-sonnet-4-20250514")
+    expect(generate.allowed_skills).to eq(["read_repo"])
+    expect(generate.forbidden_skills).to eq(["deploy"])
+    expect(generate.max_retries).to eq(2)
+    expect(generate.completion_criteria).to eq(["tests_generated"])
+    expect(generate.agent_prompt).to include("# Integration Tests: Generate Tests")
+    expect(generate.agent_prompt).to include("integration_specs")
+    expect(generate.agent_prompt).not_to start_with("file://")
+    expect(generate.adapter_config).to eq("output_artifact_kind" => "integration_specs")
+
+    run_tests = queue.stage_configs.find_by!(stage_name: "run_tests")
+    expect(run_tests.adapter_type).to eq("shell_script")
+    expect(run_tests.allowed_skills).to eq(["run_tests"])
+    expect(run_tests.forbidden_skills).to include("edit_files", "deploy")
+    expect(run_tests.max_retries).to eq(1)
+    expect(run_tests.completion_criteria).to eq(["tests_passed"])
+    expect(run_tests.timeout_seconds).to eq(600)
+    expect(run_tests.adapter_config).not_to have_key("working_directory")
+    expect(run_tests.adapter_config.fetch("commands")).to contain_exactly(
+      include(
+        "name" => "integration tests cookbook e2e",
+        "artifact" => "test_results",
+        "command" => "bundle exec rspec spec/e2e/integration_tests_cookbook_spec.rb"
+      )
+    )
+
+    human_review = queue.stage_configs.find_by!(stage_name: "human_review")
+    expect(human_review.adapter_type).to eq("fake")
+    expect(human_review.completion_criteria).to eq(["report_present"])
+    expect(human_review.timeout_seconds).to eq(86_400)
+
+    done = queue.stage_configs.find_by!(stage_name: "done")
+    expect(done.adapter_type).to eq("fake")
+    expect(done.completion_criteria).to eq(["report_present"])
+
+    serialized_queue = Rails.root.join("config/queues/integration_tests.yml").read
+    expect(serialized_queue).not_to include(Rails.root.to_s)
+    expect(serialized_queue).not_to include("/Users/")
+    expect(serialized_queue).not_to include("working_directory:")
+    expect(serialized_queue).to include("file://prompts/integration_map_flows.md")
+  end
+
 end
+
+
+

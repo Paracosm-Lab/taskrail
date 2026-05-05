@@ -19,7 +19,31 @@ RSpec.describe Engine::Predicates::TestsGenerated do
     result = described_class.new(claim: claim).call
 
     expect(result).to be_passed
-    expect(result.evidence).to eq({ artifact_id: artifact.id })
+    expect(result.evidence).to eq({ artifact_id: artifact.id, artifact_kind: "generated_tests", specs_count: 1 })
+  end
+
+  it "passes when an integration_specs artifact has non-empty specs" do
+    claim = build_claim(artifacts: [
+      {
+        kind: "integration_specs",
+        data: {
+          "specs" => [
+            {
+              "path" => "spec/requests/create_work_item_flow_spec.rb",
+              "content" => "require \"rails_helper\"\n",
+              "flow_name" => "Create work item and advance",
+              "boundaries_tested" => ["API", "Engine"]
+            }
+          ]
+        }
+      }
+    ])
+    artifact = claim.artifacts.find_by!(kind: "integration_specs")
+
+    result = described_class.new(claim: claim).call
+
+    expect(result).to be_passed
+    expect(result.evidence).to eq({ artifact_id: artifact.id, artifact_kind: "integration_specs", specs_count: 1 })
   end
 
   it "fails when generated_tests artifact is missing" do
@@ -28,7 +52,7 @@ RSpec.describe Engine::Predicates::TestsGenerated do
     result = described_class.new(claim: claim).call
 
     expect(result).not_to be_passed
-    expect(result.reason).to eq("missing generated_tests artifact with specs")
+    expect(result.reason).to eq("missing generated_tests or integration_specs artifact with specs")
   end
 
   it "fails when specs is empty" do
@@ -37,6 +61,6 @@ RSpec.describe Engine::Predicates::TestsGenerated do
     result = described_class.new(claim: claim).call
 
     expect(result).not_to be_passed
-    expect(result.reason).to eq("missing generated_tests artifact with specs")
+    expect(result.reason).to eq("missing generated_tests or integration_specs artifact with specs")
   end
 end

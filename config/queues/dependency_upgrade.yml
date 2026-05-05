@@ -1,0 +1,96 @@
+name: Dependency Upgrade
+slug: dependency_upgrade
+stages:
+  - audit_dependencies
+  - prioritize_upgrades
+  - upgrade_one
+  - run_tests
+  - human_review
+  - done
+config:
+  default_max_retries: 2
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 3
+stage_configs:
+  audit_dependencies:
+    adapter_type: shell_script
+    model_override: claude-haiku-4-5-20251001
+    allowed_skills: [read_repo, run_audit]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [audit_produced]
+    agent_prompt: file://prompts/deps_audit.md
+    timeout_seconds: 300
+    adapter_config:
+      output_artifact_kind: dependency_audit
+      fixture_app: cookbooks/fixtures/apps/dependency_upgrade
+      commands:
+        - name: dependency audit fixture
+          command: ruby cookbooks/fixtures/apps/dependency_upgrade/bin/dependency-audit
+          artifact: dependency_audit
+  prioritize_upgrades:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [upgrade_plan_produced]
+    agent_prompt: file://prompts/deps_prioritize.md
+    timeout_seconds: 600
+    adapter_config:
+      input_artifact_kind: dependency_audit
+      output_artifact_kind: upgrade_plan
+      spawn_target_queue: development
+  upgrade_one:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo, edit_files]
+    forbidden_skills: [deploy]
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria: [upgrade_drafted]
+    agent_prompt: file://prompts/deps_upgrade_one.md
+    timeout_seconds: 600
+    adapter_config:
+      input_artifact_kind: upgrade_plan
+      output_artifact_kind: upgrade_patches
+      fixture_app: cookbooks/fixtures/apps/dependency_upgrade
+      branch_prefix: dependency-upgrade
+  run_tests:
+    adapter_type: shell_script
+    allowed_skills: [run_tests]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [tests_passed]
+    agent_prompt: Apply dependency upgrade patches, install dependencies, run the focused fixture specs, then run the relevant application test suite. Report pass/fail with command output.
+    timeout_seconds: 600
+    adapter_config:
+      input_artifact_kind: upgrade_patches
+      output_artifact_kind: test_results
+      fixture_app: cookbooks/fixtures/apps/dependency_upgrade
+      commands:
+        - name: dependency upgrade fixture specs
+          command: 'PATH="$HOME/.rbenv/shims:$HOME/.rbenv/bin:$PATH" bundle exec rspec spec/e2e/dependency_upgrade_cookbook_spec.rb'
+          artifact: test_results
+  human_review:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Review the dependency upgrade PR draft, including version delta, CVE/changelog context, test results, branch name, and any migration notes before merge.
+    timeout_seconds: 86400
+  done:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60

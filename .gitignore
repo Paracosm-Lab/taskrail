@@ -39,3 +39,4 @@
 # Local agent scratch/planning artifacts.
 /.hermes/
 /.superpowers/
+.DS_Store

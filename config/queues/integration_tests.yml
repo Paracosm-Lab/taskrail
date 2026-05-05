@@ -1,0 +1,83 @@
+name: Integration Test Generator
+slug: integration_tests
+stages:
+  - map_user_flows
+  - identify_boundaries
+  - generate_tests
+  - run_tests
+  - human_review
+  - done
+config:
+  default_max_retries: 2
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 3
+stage_configs:
+  map_user_flows:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [flows_mapped]
+    agent_prompt: file://prompts/integration_map_flows.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: user_flows
+  identify_boundaries:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [boundaries_identified]
+    agent_prompt: file://prompts/integration_boundaries.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: boundary_map
+  generate_tests:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy]
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria: [tests_generated]
+    agent_prompt: file://prompts/integration_generate.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: integration_specs
+  run_tests:
+    adapter_type: shell_script
+    allowed_skills: [run_tests]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [tests_passed]
+    agent_prompt: Write generated integration spec files, run the focused integration suite, and report pass/fail with command output.
+    timeout_seconds: 600
+    adapter_config:
+      commands:
+        - name: integration tests cookbook e2e
+          command: bundle exec rspec spec/e2e/integration_tests_cookbook_spec.rb
+          artifact: test_results
+  human_review:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Review mapped user flows, boundary map, and generated integration specs before applying them to production code.
+    timeout_seconds: 86400
+  done:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60

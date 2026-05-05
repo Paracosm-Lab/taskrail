@@ -1,0 +1,11 @@
+{
+  "name": "dependency-upgrade-fixture",
+  "private": true,
+  "dependencies": {
+    "lodash": "4.17.20",
+    "vite": "4.5.0"
+  },
+  "scripts": {
+    "test": "echo fixture tests pass"
+  }
+}

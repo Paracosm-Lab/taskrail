@@ -1,0 +1,102 @@
+name: Security Scan
+slug: security_scan
+stages:
+  - scan_vulnerabilities
+  - classify_severity
+  - draft_fixes
+  - run_tests
+  - human_review
+  - done
+config:
+  default_max_retries: 2
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 2
+stage_configs:
+  scan_vulnerabilities:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [scan_completed]
+    agent_prompt: file://prompts/security_scan.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: vulnerability_scan
+      fixture_app: test/fixtures/apps/vulnerable_security_app
+      vulnerability_categories:
+        - injection
+        - auth
+        - xss
+        - secrets
+        - data_exposure
+        - csrf
+        - dependencies
+        - insecure_config
+  classify_severity:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [severity_classified]
+    agent_prompt: file://prompts/security_classify.md
+    timeout_seconds: 600
+    adapter_config:
+      input_artifact_kind: vulnerability_scan
+      output_artifact_kind: severity_report
+      fixture_app: test/fixtures/apps/vulnerable_security_app
+  draft_fixes:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy]
+    max_retries: 2
+    escalation_target: block_and_notify
+    completion_criteria: [fixes_drafted]
+    agent_prompt: file://prompts/security_draft_fixes.md
+    timeout_seconds: 600
+    adapter_config:
+      input_artifact_kind: severity_report
+      output_artifact_kind: fix_patches
+      patch_schema_name: security_patches
+      spawn_targets:
+        hardcoded_secrets: credential_rotation
+        insecure_dependencies: dependency_upgrade
+        systemic_auth: development
+  run_tests:
+    adapter_type: shell_script
+    allowed_skills: [run_tests]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    escalation_target: block_and_notify
+    completion_criteria: [tests_passed]
+    agent_prompt: "Apply generated security patches to the vulnerable fixture app and run the security scan fixture checks. Report pass/fail with command output."
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: test_results
+      commands:
+        - name: security scan fixture specs
+          artifact: test_results
+          command: 'PATH="$HOME/.rbenv/shims:$HOME/.rbenv/bin:$PATH" bundle exec rspec spec/services/engine/security_scan_workflow_integration_spec.rb'
+  human_review:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Security review — critical and high findings require a security-experienced reviewer. Verify exploitability, proposed patches, credential rotation follow-ups, dependency-upgrade follow-ups, and any systemic-auth development follow-ups before merge.
+    timeout_seconds: 86400
+  done:
+    adapter_type: fake
+    allowed_skills: []
+    forbidden_skills: []
+    max_retries: 0
+    escalation_target: block_and_notify
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60

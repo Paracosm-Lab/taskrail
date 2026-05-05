@@ -1,0 +1,43 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+
+puts JSON.pretty_generate(
+  dependencies: [
+    {
+      name: "rack",
+      ecosystem: "rubygems",
+      current: "2.2.8",
+      latest: "3.0.9",
+      type: "major",
+      cves: ["CVE-2024-25126"],
+      changelog_url: "https://github.com/rack/rack/releases",
+      manifest: "Gemfile"
+    },
+    {
+      name: "puma",
+      ecosystem: "rubygems",
+      current: "6.4.0",
+      latest: "6.4.2",
+      type: "patch",
+      cves: [],
+      changelog_url: "https://github.com/puma/puma/releases",
+      manifest: "Gemfile"
+    },
+    {
+      name: "lodash",
+      ecosystem: "npm",
+      current: "4.17.20",
+      latest: "4.17.21",
+      type: "patch",
+      cves: ["CVE-2021-23337"],
+      changelog_url: "https://github.com/lodash/lodash/releases",
+      manifest: "package.json"
+    }
+  ],
+  total_outdated: 3,
+  cve_count: 2,
+  audit_commands: ["fixture dependency audit"],
+  notes: ["Static fixture output; no network calls performed"]
+)
