@@ -19,6 +19,7 @@ development_queue.fetch("stage_configs").each do |stage_name, config|
     agent_prompt: config["agent_prompt"],
     model_override: config["model_override"],
     timeout_seconds: config["timeout_seconds"],
-    adapter_type: config.fetch("adapter_type", "fake")
+    adapter_type: config.fetch("adapter_type", "fake"),
+    adapter_config: config.fetch("adapter_config", {})
   )
 end

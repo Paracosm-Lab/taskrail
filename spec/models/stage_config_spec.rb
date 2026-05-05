@@ -7,4 +7,10 @@ RSpec.describe StageConfig, type: :model do
   it { is_expected.to validate_presence_of(:stage_name) }
   it { is_expected.to validate_presence_of(:adapter_type) }
   it { is_expected.to validate_uniqueness_of(:stage_name).scoped_to(:work_queue_id) }
+
+  it "defaults adapter_config to an empty hash" do
+    stage_config = described_class.new
+
+    expect(stage_config.adapter_config).to eq({})
+  end
 end

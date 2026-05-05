@@ -15,6 +15,7 @@ RSpec.describe "development queue seed" do
 
     test_stage = queue.stage_configs.find_by!(stage_name: "test")
     expect(test_stage.completion_criteria).to eq(%w[tests_passed lint_clean coverage_not_decreased])
+    expect(test_stage.adapter_config).to eq({})
   end
 
   it "is idempotent" do
