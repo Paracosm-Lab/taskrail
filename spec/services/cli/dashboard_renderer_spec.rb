@@ -61,6 +61,33 @@ RSpec.describe Cli::DashboardRenderer do
     expect(output).to include("codex:active async run-123")
   end
 
+  it "renders human escalation summaries on work item rows" do
+    data = Cli::DashboardDataLoader::DashboardData.new(
+      api_url: "http://localhost:3000",
+      queue_slug: "development",
+      queue: {},
+      stages: [],
+      work_items: [{
+        "id" => 12,
+        "status" => "blocked",
+        "stage_name" => "build",
+        "title" => "Fix flaky tests",
+        "escalation" => {
+          "target" => "human",
+          "human_action_required" => true,
+          "question" => "Tests failed.\nProvide guidance.\e[31m"
+        }
+      }],
+      costs: {}
+    )
+
+    output = described_class.new(data: data).render
+
+    expect(output).to include("HUMAN: Tests failed. Provide guidance.")
+    expect(output).not_to include("\e")
+    expect(output).not_to include("Tests failed.\nProvide guidance")
+  end
+
   it "renders an empty work item state" do
     data = Cli::DashboardDataLoader::DashboardData.new(
       api_url: "http://localhost:3000",

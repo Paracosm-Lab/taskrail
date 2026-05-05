@@ -62,11 +62,10 @@ module Cli
     end
 
     def work_item_detail(item)
-      title = truncate(cell(item.fetch("title", "")))
-      claim = item["active_claim"]
-      return title unless claim
-
-      [title, active_claim_text(claim)].reject(&:empty?).join(" ")
+      parts = [truncate(cell(item.fetch("title", "")))]
+      parts << active_claim_text(item["active_claim"]) if item["active_claim"]
+      parts << escalation_text(item["escalation"]) if item["escalation"]
+      parts.reject(&:empty?).join(" ")
     end
 
     def active_claim_text(claim)
@@ -74,6 +73,13 @@ module Cli
       parts << "async" if claim["async_execution"]
       parts << cell(claim.fetch("external_id", ""))
       parts.reject(&:empty?).join(" ")
+    end
+
+    def escalation_text(escalation)
+      return "" unless escalation["human_action_required"]
+
+      message = escalation["question"] || escalation["reason"] || "action required"
+      "HUMAN: #{truncate(cell(message))}"
     end
 
     def cell(value)
