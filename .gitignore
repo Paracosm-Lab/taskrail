@@ -35,3 +35,7 @@
 /tui/node_modules/
 /tui/dist/
 /tui/dist-test/
+
+# Local agent scratch/planning artifacts.
+/.hermes/
+/.superpowers/
