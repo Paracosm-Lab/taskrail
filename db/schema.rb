@@ -10,13 +10,13 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_05_000300) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_05_000400) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
   create_table "artifacts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "work_item_id", null: false
-    t.uuid "claim_id", null: false
+    t.uuid "claim_id"
     t.string "kind", null: false
     t.jsonb "data", default: {}, null: false
     t.datetime "created_at", null: false
@@ -39,6 +39,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_05_000300) do
     t.datetime "last_heartbeat_at"
     t.string "heartbeat_message"
     t.index ["work_item_id"], name: "index_claims_on_work_item_id"
+  end
+
+  create_table "pipes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "name", null: false
+    t.string "slug", null: false
+    t.uuid "from_queue_id", null: false
+    t.string "from_stage", null: false
+    t.uuid "to_queue_id", null: false
+    t.string "to_stage"
+    t.jsonb "when_config", default: {}, null: false
+    t.jsonb "transform_config", default: {}, null: false
+    t.jsonb "limits", default: {}, null: false
+    t.boolean "enabled", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["from_queue_id"], name: "index_pipes_on_from_queue_id"
+    t.index ["slug"], name: "index_pipes_on_slug", unique: true
+    t.index ["to_queue_id"], name: "index_pipes_on_to_queue_id"
   end
 
   create_table "reports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -132,7 +150,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_05_000300) do
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "pipe_id"
     t.index ["parent_id"], name: "index_work_items_on_parent_id"
+    t.index ["pipe_id"], name: "index_work_items_on_pipe_id"
     t.index ["work_queue_id"], name: "index_work_items_on_work_queue_id"
   end
 
@@ -149,6 +169,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_05_000300) do
   add_foreign_key "artifacts", "claims"
   add_foreign_key "artifacts", "work_items"
   add_foreign_key "claims", "work_items"
+  add_foreign_key "pipes", "work_queues", column: "from_queue_id"
+  add_foreign_key "pipes", "work_queues", column: "to_queue_id"
   add_foreign_key "reports", "claims"
   add_foreign_key "reports", "work_items"
   add_foreign_key "stage_configs", "work_queues"
@@ -156,6 +178,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_05_000300) do
   add_foreign_key "traces", "claims"
   add_foreign_key "traces", "work_items"
   add_foreign_key "transition_logs", "work_items"
+  add_foreign_key "work_items", "pipes"
   add_foreign_key "work_items", "work_items", column: "parent_id"
   add_foreign_key "work_items", "work_queues"
 end
