@@ -100,6 +100,76 @@ RSpec.describe "Workflow API", type: :request do
     expect(response.parsed_body.fetch("escalation").fetch("target")).to eq("human")
   end
 
+  it "includes trace summaries when requested" do
+    queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[build done])
+    work_item = WorkItem.create!(work_queue: queue, title: "Traceable", spec_url: "opaque spec", stage_name: "build")
+    claim = Claim.create!(work_item: work_item, agent_type: "codex", assignment: { "prompt" => "do not expose" })
+    trace = Trace.create!(
+      claim: claim,
+      work_item: work_item,
+      stage_name: "build",
+      agent_type: "codex",
+      model: "codex-mini",
+      total_tokens_in: 10,
+      total_tokens_out: 20,
+      total_cost_cents: 7,
+      total_duration_ms: 123
+    )
+    trace.trace_events.create!(
+      sequence: 1,
+      event_type: "tool_use",
+      tokens_in: 3,
+      tokens_out: 4,
+      cost_cents: 5,
+      duration_ms: 6,
+      input_summary: "Prompt says do not expose",
+      output_summary: "Authorization Bearer do not expose",
+      metadata: {
+        "tool" => "git",
+        "prompt" => "do not expose",
+        "access_token" => "do not expose",
+        "nested" => { "client_secret" => "do not expose", "safe" => "kept", "command_output" => "api_key do not expose" },
+        "events" => [{ "bearer_token" => "do not expose", "name" => "tool-call" }]
+      }
+    )
+
+    get "/api/v1/work_items/#{work_item.id}", params: { traces: true }
+    expect(response).to have_http_status(:ok)
+    traces = response.parsed_body.fetch("traces")
+    expect(traces.first).to include(
+      "id" => trace.id,
+      "stage_name" => "build",
+      "agent_type" => "codex",
+      "model" => "codex-mini",
+      "total_tokens_in" => 10,
+      "total_tokens_out" => 20,
+      "total_cost_cents" => 7,
+      "total_duration_ms" => 123
+    )
+    expect(traces.first.fetch("events").first).to include(
+      "sequence" => 1,
+      "event_type" => "tool_use",
+      "input_summary" => "[REDACTED]",
+      "output_summary" => "[REDACTED]",
+      "tokens_in" => 3,
+      "tokens_out" => 4,
+      "cost_cents" => 5,
+      "duration_ms" => 6,
+      "metadata" => {
+        "tool" => "git",
+        "prompt" => "[REDACTED]",
+        "access_token" => "[REDACTED]",
+        "nested" => { "client_secret" => "[REDACTED]", "safe" => "kept", "command_output" => "[REDACTED]" },
+        "events" => [{ "bearer_token" => "[REDACTED]", "name" => "tool-call" }]
+      }
+    )
+    expect(response.body).not_to include("do not expose")
+
+    get "/api/v1/work_items/#{work_item.id}"
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body).not_to have_key("traces")
+  end
+
   it "answers, retries, and cancels work items" do
     queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[intake build done])
     work_item = WorkItem.create!(

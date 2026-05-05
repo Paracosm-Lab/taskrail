@@ -22,7 +22,7 @@ class StupidClawCli
 
     case command
     when "submit" then submit
-    when "status" then get("/api/v1/work_items/#{required_arg("WORK_ITEM_ID")}")
+    when "status" then status
     when "list" then list
     when "answer" then answer
     when "retry" then post("/api/v1/work_items/#{required_arg("WORK_ITEM_ID")}/retry", {})
@@ -56,6 +56,17 @@ class StupidClawCli
       spec_url: options.fetch(:spec_url),
       title: options.fetch(:title)
     })
+  end
+
+  def status
+    id = URI.encode_www_form_component(required_arg("WORK_ITEM_ID"))
+    options = {}
+    OptionParser.new do |parser|
+      parser.on("--traces") { options[:traces] = true }
+    end.parse!(@argv)
+
+    query = URI.encode_www_form(options)
+    get(query.empty? ? "/api/v1/work_items/#{id}" : "/api/v1/work_items/#{id}?#{query}")
   end
 
   def list

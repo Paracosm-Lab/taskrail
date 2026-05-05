@@ -10,7 +10,7 @@ module Api
       end
 
       def show
-        render json: serialize(work_item)
+        render json: serialize(work_item, include_traces: ActiveModel::Type::Boolean.new.cast(params[:traces]))
       end
 
       def create
@@ -60,8 +60,8 @@ module Api
         @work_item ||= WorkItem.find(params[:id])
       end
 
-      def serialize(item)
-        {
+      def serialize(item, include_traces: false)
+        payload = {
           id: item.id,
           title: item.title,
           spec_url: item.spec_url,
@@ -75,6 +75,8 @@ module Api
           active_claim: active_claim_summary(item),
           escalation: escalation_summary(item)
         }
+        payload[:traces] = trace_summaries(item) if include_traces
+        payload
       end
 
       def active_claim_summary(item)
@@ -104,6 +106,63 @@ module Api
           question: escalation["question"],
           human_action_required: escalation.fetch("human_action_required", item.blocked?)
         }
+      end
+
+      def trace_summaries(item)
+        item.traces.includes(:trace_events).order(created_at: :asc).map do |trace|
+          {
+            id: trace.id,
+            stage_name: trace.stage_name,
+            agent_type: trace.agent_type,
+            model: trace.model,
+            total_tokens_in: trace.total_tokens_in,
+            total_tokens_out: trace.total_tokens_out,
+            total_cost_cents: trace.total_cost_cents,
+            total_duration_ms: trace.total_duration_ms,
+            events: trace.trace_events.order(:sequence).map { |event| trace_event_summary(event) }
+          }
+        end
+      end
+
+      def trace_event_summary(event)
+        {
+          sequence: event.sequence,
+          event_type: event.event_type,
+          tokens_in: event.tokens_in,
+          tokens_out: event.tokens_out,
+          cost_cents: event.cost_cents,
+          duration_ms: event.duration_ms,
+          input_summary: safe_trace_summary(event.input_summary, redact_always: true),
+          output_summary: safe_trace_summary(event.output_summary),
+          metadata: safe_trace_metadata(event.metadata)
+        }
+      end
+
+      def safe_trace_metadata(value)
+        case value
+        when Hash
+          value.each_with_object({}) do |(key, child), sanitized|
+            sanitized[key] = sensitive_trace_key?(key) ? "[REDACTED]" : safe_trace_metadata(child)
+          end
+        when Array
+          value.map { |child| safe_trace_metadata(child) }
+        when String
+          safe_trace_summary(value)
+        else
+          value
+        end
+      end
+
+      def safe_trace_summary(value, redact_always: false)
+        return value unless value.is_a?(String)
+        return "[REDACTED]" if redact_always && value.present?
+        return "[REDACTED]" if value.match?(/(?:api[_-]?key|apikey|secret|password|passwd|token|bearer|authorization|credential)(?:\s|[:=]|$)/i)
+
+        value
+      end
+
+      def sensitive_trace_key?(key)
+        key.to_s.match?(/(?:prompt|assignment|api[_-]?key|apikey|secret|password|passwd|token|authorization|credential)/i)
       end
     end
   end

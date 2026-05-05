@@ -62,21 +62,23 @@ RSpec.describe "bin/stupidclaw" do
   it "maps read and lifecycle commands to API endpoints" do
     with_server do |api_url, requests|
       commands = [
-        [["status", "abc"], "GET", "/api/v1/work_items/abc"],
-        [["list", "--queue", "development", "--stage", "build"], "GET", "/api/v1/work_items"],
-        [["answer", "abc", "Use bearer tokens"], "POST", "/api/v1/work_items/abc/answer"],
-        [["retry", "abc"], "POST", "/api/v1/work_items/abc/retry"],
-        [["cancel", "abc"], "POST", "/api/v1/work_items/abc/cancel"],
-        [["queues"], "GET", "/api/v1/queues"],
-        [["stages", "development"], "GET", "/api/v1/queues/development/stages"]
+        [["status", "abc"], "GET", "/api/v1/work_items/abc", nil],
+        [["status", "abc", "--traces"], "GET", "/api/v1/work_items/abc", "traces=true"],
+        [["list", "--queue", "development", "--stage", "build"], "GET", "/api/v1/work_items", "queue=development&stage=build"],
+        [["answer", "abc", "Use bearer tokens"], "POST", "/api/v1/work_items/abc/answer", nil],
+        [["retry", "abc"], "POST", "/api/v1/work_items/abc/retry", nil],
+        [["cancel", "abc"], "POST", "/api/v1/work_items/abc/cancel", nil],
+        [["queues"], "GET", "/api/v1/queues", nil],
+        [["stages", "development"], "GET", "/api/v1/queues/development/stages", nil]
       ]
 
-      commands.each do |args, expected_method, expected_path|
+      commands.each do |args, expected_method, expected_path, expected_query|
         _stdout, _stderr, status = run_cli(api_url, *args)
         expect(status).to be_success
         request = requests.pop
         expect(request[:method]).to eq(expected_method)
         expect(request[:path]).to eq(expected_path)
+        expect(request[:query]).to eq(expected_query)
       end
     end
   end
