@@ -15,6 +15,7 @@ module Engine
         prompt: @stage_config.agent_prompt,
         model: @stage_config.model_override,
         context: context_payload,
+        skills: skills_payload,
         limits: limits_payload
       }
     end
@@ -67,6 +68,16 @@ module Engine
         timeout_seconds: @claim.timeout_seconds || @stage_config.timeout_seconds,
         max_tokens: @stage_config.work_queue.config["max_tokens"],
         max_cost_cents: @stage_config.work_queue.config["max_cost_cents"]
+      }
+    end
+
+    def skills_payload
+      allowed = @stage_config.allowed_skills || []
+      forbidden = @stage_config.forbidden_skills || []
+
+      {
+        allowed: Engine::SkillLoader.load_all(allowed),
+        forbidden: forbidden
       }
     end
   end

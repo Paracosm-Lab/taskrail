@@ -6,7 +6,7 @@ RSpec.describe Engine::AssignmentBuilder do
     stage_config = StageConfig.create!(
       work_queue: queue,
       stage_name: "intake",
-      allowed_skills: ["read_spec"],
+      allowed_skills: ["classify"],
       forbidden_skills: ["deploy"],
       completion_criteria: ["report_present"],
       timeout_seconds: 600,
@@ -43,7 +43,7 @@ RSpec.describe Engine::AssignmentBuilder do
         "working_directory" => Rails.root.to_s,
         "commands" => [{ "name" => "rspec", "command" => "bundle exec rspec" }]
       },
-      allowed_skills: ["read_spec"],
+      allowed_skills: ["classify"],
       forbidden_skills: ["deploy"],
       completion_criteria: ["report_present"]
     )
@@ -54,6 +54,9 @@ RSpec.describe Engine::AssignmentBuilder do
     expect(assignment[:context][:upstream_artifacts]).to include({ "kind" => upstream_artifact.kind, "data" => upstream_artifact.data })
     expect(assignment[:context][:feedback]).to eq("try again")
     expect(assignment[:context][:human_answer]).to eq("use bearer tokens")
+    expect(assignment[:skills][:allowed]).to have_key("classify")
+    expect(assignment[:skills][:allowed]["classify"]).to include("# Classify")
+    expect(assignment[:skills][:forbidden]).to eq(["deploy"])
     expect(assignment[:limits][:timeout_seconds]).to eq(600)
   end
 end
