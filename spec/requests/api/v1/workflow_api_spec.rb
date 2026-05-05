@@ -261,4 +261,19 @@ RSpec.describe "Workflow API", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body.fetch("total_tokens_out")).to eq(220)
   end
+
+  it "returns digest JSON for a required since window" do
+    get "/api/v1/digest", params: { since: "2h" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body).to include("window" => "2h")
+    expect(response.parsed_body).to include("summary", "costs", "blocked_items", "recent_transitions")
+  end
+
+  it "rejects digest requests without since" do
+    get "/api/v1/digest"
+
+    expect(response).to have_http_status(:bad_request)
+    expect(response.parsed_body.fetch("error")).to include("missing since")
+  end
 end

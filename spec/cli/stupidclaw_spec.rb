@@ -2,6 +2,7 @@ require "rails_helper"
 require "json"
 require "open3"
 require "socket"
+load Rails.root.join("bin/stupidclaw")
 
 RSpec.describe "bin/stupidclaw" do
   def with_server(response_body = { ok: true })
@@ -47,6 +48,34 @@ RSpec.describe "bin/stupidclaw" do
     Open3.capture3({ "STUPIDCLAW_API_URL" => api_url }.merge(env), Rails.root.join("bin/stupidclaw").to_s, *args)
   end
 
+  it "execs the Ink TUI when no subcommand is given" do
+    api_url = "http://api.example.test"
+    cli = StupidClawCli.new([], { "STUPIDCLAW_API_URL" => api_url }, StringIO.new, StringIO.new)
+
+    expect(cli).to receive(:exec_process).with(
+      "node",
+      Rails.root.join("tui/dist/index.js").to_s,
+      "--api", api_url
+    )
+
+    expect(cli.run).to eq(0)
+  end
+
+  it "passes TUI options through when args are given without a CLI subcommand" do
+    api_url = "http://api.example.test"
+    cli = StupidClawCli.new(["--queue", "ops", "--refresh", "10"], { "STUPIDCLAW_API_URL" => api_url }, StringIO.new, StringIO.new)
+
+    expect(cli).to receive(:exec_process).with(
+      "node",
+      Rails.root.join("tui/dist/index.js").to_s,
+      "--api", api_url,
+      "--queue", "ops",
+      "--refresh", "10"
+    )
+
+    expect(cli.run).to eq(0)
+  end
+
   it "submits a work item" do
     with_server({ id: "123" }) do |api_url, requests|
       _stdout, _stderr, status = run_cli(api_url, "submit", "--queue", "development", "--spec", "./spec.md", "--title", "Add calendar")
@@ -73,7 +102,9 @@ RSpec.describe "bin/stupidclaw" do
         [["stages", "development"], "GET", "/api/v1/queues/development/stages", nil],
         [["costs"], "GET", "/api/v1/costs", nil],
         [["costs", "--today"], "GET", "/api/v1/costs", "period=today"],
-        [["costs", "--work-item", "abc/123"], "GET", "/api/v1/costs/work_items/abc%2F123", nil]
+        [["costs", "--work-item", "abc/123"], "GET", "/api/v1/costs/work_items/abc%2F123", nil],
+        [["digest"], "GET", "/api/v1/digest", "since=24h"],
+        [["digest", "--since", "2h", "--json"], "GET", "/api/v1/digest", "since=2h"]
       ]
 
       commands.each do |args, expected_method, expected_path, expected_query|
@@ -84,6 +115,43 @@ RSpec.describe "bin/stupidclaw" do
         expect(request[:path]).to eq(expected_path)
         expect(request[:query]).to eq(expected_query)
       end
+    end
+  end
+
+  it "renders a digest summary by default and raw JSON when requested" do
+    digest = {
+      since: "2026-05-05T12:00:00Z",
+      generated_at: "2026-05-05T14:00:00Z",
+      window: "2h",
+      summary: {
+        clusters_created: 3,
+        runbooks_drafted: 1,
+        runbooks_published: 0,
+        items_completed: 7,
+        items_spawned: 2,
+        items_blocked: 1
+      },
+      costs: { cents: 47, tokens_in: 12_400, tokens_out: 8_100 },
+      blocked_items: [{ id: "45", title: "rate-limit-exceeded", stage_name: "human_review", question: "Key on IP or user_id?" }],
+      recent_transitions: [{ work_item_id: "42", title: "db-pool-timeout", from_stage: "ingest_signals", to_stage: "cluster_failures", trigger: "advance", at: "2026-05-05T13:58:00Z" }]
+    }
+
+    with_server(digest) do |api_url, _requests|
+      stdout, _stderr, status = run_cli(api_url, "digest", "--since", "2h")
+
+      expect(status).to be_success
+      expect(stdout).to include("DIGEST (last 2h)")
+      expect(stdout).to include("Clusters created:    3")
+      expect(stdout).to include("#45  rate-limit-exceeded")
+      expect(stdout).to include("$0.47")
+      expect(stdout).to include("13:58  #42")
+    end
+
+    with_server(digest) do |api_url, _requests|
+      stdout, _stderr, status = run_cli(api_url, "digest", "--since", "2h", "--json")
+
+      expect(status).to be_success
+      expect(stdout).to eq(JSON.dump(JSON.parse(JSON.dump(digest))) + "\n")
     end
   end
 
