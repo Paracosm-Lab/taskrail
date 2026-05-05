@@ -5,7 +5,8 @@ module Engine
     ADAPTERS = {
       "fake" => Adapters::FakeAdapter,
       "shell_script" => Adapters::ShellScriptAdapter,
-      "inline_claude" => Adapters::InlineClaudeAdapter
+      "inline_claude" => Adapters::InlineClaudeAdapter,
+      "codex" => Adapters::CodexAdapter
     }.freeze
 
     def initialize(claim:, stage_config:)

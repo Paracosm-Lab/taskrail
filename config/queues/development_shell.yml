@@ -78,7 +78,6 @@ stage_configs:
     agent_prompt: Validate the branch with tests, lint, and coverage. Do not edit files.
     timeout_seconds: 600
     adapter_config:
-      working_directory: /Users/gregmushen/stupidclaw
       commands:
         - name: rspec
           command: ruby -e 'exit 0'
