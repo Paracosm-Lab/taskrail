@@ -41,7 +41,12 @@ bin/stupidclaw queues
 bin/stupidclaw stages development
 bin/stupidclaw submit --queue development --spec ./README.md --title "Smoke test"
 bin/stupidclaw list --queue development
+bin/stupidclaw list --queue development --stage build --status blocked --tag risk=high
 bin/stupidclaw status WORK_ITEM_ID
+bin/stupidclaw status WORK_ITEM_ID --traces
+bin/stupidclaw costs
+bin/stupidclaw costs --today
+bin/stupidclaw costs --work-item WORK_ITEM_ID
 bin/stupidclaw answer WORK_ITEM_ID "Use bearer tokens"
 bin/stupidclaw retry WORK_ITEM_ID
 bin/stupidclaw cancel WORK_ITEM_ID
@@ -73,7 +78,27 @@ bin/stupidclaw dashboard --queue development-codex --status pending --limit 20
 bin/stupidclaw dashboard --queue development --watch --refresh 5
 ```
 
-The dashboard is a read-only terminal skin over the Rails API. It uses `STUPIDCLAW_API_URL` like the rest of `bin/stupidclaw`, renders queue stages/work items/costs, and shows safe active-claim summaries for async Codex work without exposing prompts, full assignments, or credentials. It does not own workflow transitions; queue-owned transitions remain authoritative. Use the existing `submit`, `answer`, `retry`, and `cancel` commands for writes.
+The dashboard is a read-only terminal skin over the Rails API. It uses `STUPIDCLAW_API_URL` like the rest of `bin/stupidclaw`, renders queue stages/work items/costs, and shows safe active-claim summaries for async Codex work without exposing prompts, full assignments, or credentials. Blocked items with human escalations show a `HUMAN:` marker plus an action hint to run `bin/stupidclaw answer WORK_ITEM_ID "your guidance"`. It does not own workflow transitions; queue-owned transitions remain authoritative. Use the existing `submit`, `answer`, `retry`, and `cancel` commands for writes.
+
+## Human escalation and observability
+
+When retry or review-regression budgets are exhausted, StupidClaw blocks the work item and stores a safe escalation summary. Operators resolve it with:
+
+```bash
+bin/stupidclaw answer WORK_ITEM_ID "your guidance"
+```
+
+Useful inspection commands:
+
+```bash
+bin/stupidclaw status WORK_ITEM_ID --traces
+bin/stupidclaw costs
+bin/stupidclaw costs --today
+bin/stupidclaw costs --work-item WORK_ITEM_ID
+bin/stupidclaw list --queue development --status blocked --tag risk=high
+```
+
+`status --traces` returns sanitized trace summaries only. Prompt-derived input summaries and prompt/assignment/credential/token metadata are redacted.
 
 ## What to inspect when debugging
 

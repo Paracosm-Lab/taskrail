@@ -97,11 +97,14 @@ GET    /api/v1/queues
 GET    /api/v1/queues/:slug/stages
 POST   /api/v1/work_items
 GET    /api/v1/work_items/:id
+GET    /api/v1/work_items/:id?traces=true
 GET    /api/v1/work_items
+GET    /api/v1/work_items?queue=:slug&stage=:stage&status=:status&tags[risk]=high
 POST   /api/v1/work_items/:id/answer
 POST   /api/v1/work_items/:id/retry
 POST   /api/v1/work_items/:id/cancel
 GET    /api/v1/costs
+GET    /api/v1/costs?period=today
 GET    /api/v1/costs/work_items/:id
 ```
 
@@ -129,11 +132,37 @@ bin/stupidclaw stages development
 bin/stupidclaw submit --queue development --spec ./README.md --title "Smoke test"
 bin/stupidclaw list --queue development
 bin/stupidclaw list --queue development --stage build
+bin/stupidclaw list --queue development --stage build --status blocked --tag risk=high
 bin/stupidclaw status WORK_ITEM_ID
+bin/stupidclaw status WORK_ITEM_ID --traces
+bin/stupidclaw costs
+bin/stupidclaw costs --today
+bin/stupidclaw costs --work-item WORK_ITEM_ID
 bin/stupidclaw answer WORK_ITEM_ID "Use bearer tokens"
 bin/stupidclaw retry WORK_ITEM_ID
 bin/stupidclaw cancel WORK_ITEM_ID
 ```
+
+## Human escalation and observability
+
+When retry budgets or review regression budgets are exhausted, queue-owned transition rules block the work item and store a safe human escalation summary. The API exposes only the safe escalation fields needed by operators; it does not expose prompts, full assignments, credentials, or raw trace metadata. Future Slack/Telegram/email notification integrations are not part of this slice yet.
+
+Humans unblock work through the existing answer flow:
+
+```bash
+bin/stupidclaw answer WORK_ITEM_ID "Use bearer tokens"
+```
+
+For investigation and cost visibility:
+
+```bash
+bin/stupidclaw status WORK_ITEM_ID --traces
+bin/stupidclaw costs
+bin/stupidclaw costs --today
+bin/stupidclaw costs --work-item WORK_ITEM_ID
+```
+
+`status --traces` includes sanitized trace summaries. Prompt-derived input summaries are redacted, and trace metadata is recursively sanitized for prompt, assignment, token, secret, API-key, password, authorization, and credential fields.
 
 ## Dashboard TUI
 
@@ -166,6 +195,12 @@ codex:active async run-123
 ```
 
 The dashboard rows intentionally display only safe active-claim fields: agent type, status, async flag, and external id. The underlying API summary also includes the claim id for clients that need it. The dashboard does not display full assignment payloads, prompts, or credentials.
+
+Blocked items that require human input show a compact `HUMAN:` marker and an `Actions` section:
+
+```text
+Run: bin/stupidclaw answer WORK_ITEM_ID "your guidance"
+```
 
 ## Fake workflow smoke test
 
