@@ -1,8 +1,19 @@
 require "rails_helper"
 
-RSpec.describe Pipe do
+RSpec.describe Pipe, type: :model do
   def make_queue(slug, stages)
     WorkQueue.create!(name: slug, slug: slug, stages: stages)
+  end
+
+  describe "validations" do
+    subject do
+      q = WorkQueue.create!(name: "v-src-#{SecureRandom.hex(4)}", slug: "v-src-#{SecureRandom.hex(4)}", stages: ["scan", "done"])
+      t = WorkQueue.create!(name: "v-dst-#{SecureRandom.hex(4)}", slug: "v-dst-#{SecureRandom.hex(4)}", stages: ["intake", "done"])
+      Pipe.new(name: "Valid", slug: "valid-#{SecureRandom.hex(4)}", from_queue: q, from_stage: "scan", to_queue: t)
+    end
+
+    it { is_expected.to validate_presence_of(:name) }
+    it { is_expected.to validate_presence_of(:from_stage) }
   end
 
   it "is valid with required fields" do

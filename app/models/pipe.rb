@@ -5,6 +5,8 @@ class Pipe < ApplicationRecord
   validates :name, :slug, :from_stage, presence: true
   validates :slug, uniqueness: true
   validate :from_stage_exists_in_queue
+
+  scope :active, -> { where(enabled: true) }
   validate :to_stage_exists_in_queue
   validate :no_backward_same_queue_loop
 
@@ -30,8 +32,10 @@ class Pipe < ApplicationRecord
 
     from_index = from_queue.stages.index(from_stage)
     to_index = to_queue.stages.index(to_stage)
+    # stage existence is validated separately; skip loop check if either index is nil
     return unless from_index && to_index
     return if to_index > from_index
+    # to_index <= from_index is invalid (same or earlier stage)
 
     errors.add(:to_stage, "must come after from_stage in the stage sequence for same-queue pipes")
   end

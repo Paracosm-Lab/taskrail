@@ -2,6 +2,7 @@ require "rails_helper"
 
 RSpec.describe WorkItem, type: :model do
   it { is_expected.to belong_to(:work_queue) }
+  it { is_expected.to belong_to(:pipe).optional }
   it { is_expected.to belong_to(:parent).class_name("WorkItem").optional }
   it { is_expected.to have_many(:children).class_name("WorkItem").with_foreign_key(:parent_id).dependent(:nullify) }
   it { is_expected.to have_many(:claims).dependent(:destroy) }
