@@ -1,0 +1,78 @@
+steps:
+  lint:
+    image: ruby:3.2.0
+    commands:
+      - apt-get update -qq
+      - apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config
+      - bundle install --jobs 4 --retry 3
+      - bin/rubocop
+
+  security_scan:
+    image: ruby:3.2.0
+    commands:
+      - apt-get update -qq
+      - apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config
+      - bundle install --jobs 4 --retry 3
+      - bin/brakeman --no-pager
+
+  test_ruby:
+    image: ruby:3.2.0
+    environment:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/stupidclaw_test
+    commands:
+      - apt-get update -qq
+      - apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config
+      - bundle install --jobs 4 --retry 3
+      - bin/rails db:test:prepare test
+    depends_on:
+      - lint
+    when:
+      event: [push, pull_request]
+
+  test_tui:
+    image: node:20
+    commands:
+      - cd tui
+      - npm ci
+      - npm test
+    depends_on:
+      - lint
+    when:
+      event: [push, pull_request]
+
+  docker_build_pr:
+    image: woodpeckerci/plugin-docker-buildx
+    settings:
+      repo: 192.168.1.76:5000/stupidclaw
+      dry_run: true
+      dockerfile: Dockerfile
+    depends_on:
+      - test_ruby
+      - test_tui
+    when:
+      event: [pull_request]
+
+  docker_build_main:
+    image: woodpeckerci/plugin-docker-buildx
+    settings:
+      repo: 192.168.1.76:5000/stupidclaw
+      dry_run: false
+      dockerfile: Dockerfile
+      tags:
+        - latest
+        - ${CI_COMMIT_SHA}
+    depends_on:
+      - test_ruby
+      - test_tui
+    when:
+      event: [push]
+      branch: [main]
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: stupidclaw_test

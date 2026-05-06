@@ -34,7 +34,7 @@ MVP-0 still keeps the default `development` queue fake-backed. Real model adapte
 - Docker / Docker Compose
 - PostgreSQL via the included `docker-compose.yml`
 
-The local Compose file maps PostgreSQL to host port `5433` to avoid conflicts with other local Postgres instances.
+The local Compose file maps PostgreSQL to host port `5433` and Rails to host port `3333`.
 
 ## Setup
 
@@ -43,9 +43,21 @@ From this directory:
 ```bash
 eval "$(/opt/homebrew/bin/rbenv init - zsh)"
 bundle install
-docker compose up -d postgres
+docker compose up -d
 bin/rails db:prepare
 bin/rails db:seed
+```
+
+To run fully containerized:
+
+```bash
+docker compose up --build
+```
+
+The API is then available at:
+
+```text
+http://localhost:3333
 ```
 
 The seed task loads every queue YAML file from:
@@ -84,6 +96,22 @@ The API defaults to:
 ```text
 http://localhost:3000
 ```
+
+If using Docker Compose, set:
+
+```bash
+export STUPIDCLAW_API_URL=http://localhost:3333
+```
+
+## CI/CD (Woodpecker)
+
+This repository now includes `.woodpecker.yml` with these stages:
+
+- `lint` (`rubocop`)
+- `security_scan` (`brakeman`)
+- `test_ruby` (`bin/rails db:test:prepare test`) with Postgres service
+- `test_tui` (`npm test` in `tui/`)
+- `docker_build` (dry-run image build via Buildx plugin)
 
 ## Run one engine tick
 

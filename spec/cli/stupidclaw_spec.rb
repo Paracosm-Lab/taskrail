@@ -255,4 +255,28 @@ RSpec.describe "bin/stupidclaw" do
       expect(stderr).to include("missing queue")
     end
   end
+
+  it "runs doctor checks against core endpoints" do
+    responses = {
+      "/api/v1/queues" => { queues: [{ slug: "development" }] },
+      "/api/v1/costs" => { total_cost_cents: 0, total_tokens_in: 0, total_tokens_out: 0 },
+      "/up" => { status: "ok" }
+    }
+
+    with_server(responses) do |api_url, requests|
+      stdout, _stderr, status = run_cli(api_url, "doctor")
+
+      expect(status).to be_success
+      expect(stdout).to include("StupidClaw doctor")
+      expect(stdout).to include("[OK] queues endpoint /api/v1/queues")
+      expect(stdout).to include("[OK] costs endpoint /api/v1/costs")
+      expect(stdout).to include("[OK] rails health endpoint /up")
+      expect(stdout).to include("Doctor passed.")
+      expect(3.times.map { requests.pop }.map { |request| request[:path] }).to contain_exactly(
+        "/api/v1/queues",
+        "/api/v1/costs",
+        "/up"
+      )
+    end
+  end
 end
