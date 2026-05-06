@@ -5,6 +5,7 @@ module Web
     def index
       @queues = WorkQueue.order(:slug).map do |q|
         counts = q.work_items.group(:status).count
+                  .transform_keys { |k| WorkItem.statuses.key(k) }
         { queue: q, counts: counts }
       end
     end
@@ -22,21 +23,22 @@ module Web
 
     def set_queue
       @queue = WorkQueue.find_by(slug: params[:slug])
-      render plain: "Queue not found", status: :not_found unless @queue
+      render(plain: "Queue not found", status: :not_found) and return unless @queue
     end
 
     def grouped_work_items
-      @queue.work_items
+      non_completed = @queue.work_items
         .where.not(status: :completed)
         .order(updated_at: :desc)
         .group_by(&:stage_name)
-        .merge(
-          @queue.work_items
-            .where(status: :completed)
-            .order(updated_at: :desc)
-            .limit(10)
-            .group_by(&:stage_name)
-        )
+
+      completed = @queue.work_items
+        .where(status: :completed)
+        .order(updated_at: :desc)
+        .limit(10)
+        .group_by(&:stage_name)
+
+      non_completed.merge(completed) { |_stage, a, b| a + b }
     end
   end
 end
