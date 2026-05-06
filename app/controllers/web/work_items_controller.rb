@@ -4,7 +4,7 @@ module Web
 
     def show
       @queue = @work_item.work_queue
-      @claims = @work_item.claims.order(:created_at)
+      @claims = @work_item.claims.includes(:trace, :reports, :artifacts).order(:created_at)
       @artifacts = @work_item.artifacts.order(created_at: :desc)
       @transition_logs = @work_item.transition_logs.order(:created_at)
       @children = @work_item.children.includes(:work_queue).order(:created_at)

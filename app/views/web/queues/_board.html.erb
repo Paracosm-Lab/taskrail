@@ -1,6 +1,8 @@
-<div class="flex gap-3 overflow-x-auto pb-2">
-  <% @queue.stages.each do |stage| %>
-    <% items = (@work_items_by_stage || {})[stage] || [] %>
-    <%= render "column", stage: stage, items: items, queue: @queue %>
-  <% end %>
-</div>
+<turbo-frame id="kanban-board">
+  <div class="flex gap-3 overflow-x-auto pb-2">
+    <% @queue.stages.each do |stage| %>
+      <% items = (@work_items_by_stage || {})[stage] || [] %>
+      <%= render "column", stage: stage, items: items, queue: @queue %>
+    <% end %>
+  </div>
+</turbo-frame>
