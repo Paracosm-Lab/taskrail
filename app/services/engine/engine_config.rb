@@ -26,13 +26,7 @@ module Engine
       @pipes_enabled
     end
 
-    def max_pipe_depth
-      @max_pipe_depth
-    end
-
-    def max_children_per_pipe
-      @max_children_per_pipe
-    end
+    attr_reader :max_pipe_depth, :max_children_per_pipe
 
     private
 
@@ -40,7 +34,7 @@ module Engine
       config_path = Rails.root.join("config/engine.yml")
       return {} unless config_path.exist?
 
-      YAML.load_file(config_path) || {}
+      YAML.safe_load(config_path.read) || {}
     end
   end
 end
