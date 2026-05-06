@@ -7,7 +7,7 @@ module Api
       end
 
       def show
-        pipe = Pipe.find_by(slug: params[:slug])
+        pipe = Pipe.includes(:from_queue, :to_queue).find_by(slug: params[:slug])
         if pipe
           render json: pipe_json(pipe)
         else
