@@ -174,15 +174,14 @@ RSpec.describe Engine::PipeEvaluator do
   it "enforces max_children per pipe and logs limit_reached" do
     src_queue = make_queue("src-lim", ["scan", "done"])
     dst_queue = make_queue("dst-lim", ["intake", "done"])
-    pipe = make_pipe(from_queue: src_queue, from_stage: "scan", to_queue: dst_queue, limits: { "max_children" => 1 })
+    # max_children: 0 means the pipe can never create children — limit fires immediately
+    make_pipe(from_queue: src_queue, from_stage: "scan", to_queue: dst_queue, limits: { "max_children" => 0 })
 
     item = make_work_item(queue: src_queue, stage: "done")
-    # Pre-create an existing child for this pipe+parent
-    WorkItem.create!(title: "Existing", spec_url: "pipe://x/y", work_queue: dst_queue, stage_name: "intake", pipe: pipe, parent: item)
 
     Engine::PipeEvaluator.call(work_item: item, from_stage: "scan")
 
-    expect(WorkItem.where(work_queue: dst_queue).count).to eq(1) # no new item created
+    expect(WorkItem.where(work_queue: dst_queue)).to be_empty
     expect(item.transition_logs.find_by(trigger: "pipe_limit_reached")).to be_present
   end
 

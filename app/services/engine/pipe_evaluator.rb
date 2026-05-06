@@ -29,15 +29,17 @@ module Engine
       return unless conditions_pass?(pipe)
 
       existing = WorkItem.where(pipe_id: pipe.id, parent_id: @work_item.id).count
-      max_children = effective_max_children(pipe)
 
+      # Idempotency: if the pipe already fired for this source item, skip silently.
+      # This check must come before max_children so a repeated call doesn't log a
+      # spurious pipe_limit_reached event.
+      return if existing >= 1
+
+      max_children = effective_max_children(pipe)
       if existing >= max_children
         log_limit_reached(pipe, "max_children", existing, max_children)
         return
       end
-
-      # Idempotency: one child per pipe per parent by default
-      return if existing >= 1
 
       create_downstream_item(pipe)
     end
