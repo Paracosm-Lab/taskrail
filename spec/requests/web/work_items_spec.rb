@@ -35,4 +35,23 @@ RSpec.describe "Web::WorkItems", type: :request do
       expect(response).to have_http_status(:not_found)
     end
   end
+
+  describe "GET /work_items/:id — artifacts" do
+    let!(:claim) do
+      Claim.create!(work_item: work_item, agent_type: "inline_claude",
+                    status: "completed", started_at: Time.current)
+    end
+    let!(:artifact) do
+      Artifact.create!(
+        work_item: work_item, claim: claim,
+        kind: "severity_report",
+        data: { "findings" => [{ "severity" => "high" }] }
+      )
+    end
+
+    it "shows artifact kind in the response" do
+      get "/work_items/#{work_item.id}"
+      expect(response.body).to include("severity_report")
+    end
+  end
 end
