@@ -1,0 +1,70 @@
+name: Infrastructure Drift Detection
+slug: infrastructure_drift
+stages:
+  - collect_configs
+  - diff_environments
+  - classify_drift
+  - draft_sync_plan
+  - human_review
+  - done
+config:
+  default_max_retries: 2
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 0
+stage_configs:
+  collect_configs:
+    adapter_type: shell_script
+    allowed_skills: [read_repo, query_infrastructure]
+    forbidden_skills: [edit_files, deploy, mutate_infrastructure]
+    max_retries: 1
+    completion_criteria: [configs_collected]
+    agent_prompt: file://prompts/drift_collect.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: environment_configs
+  diff_environments:
+    adapter_type: inline_claude
+    model_override: claude-haiku-4-5-20251001
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    completion_criteria: [diff_produced]
+    agent_prompt: file://prompts/drift_diff.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: environment_diff
+  classify_drift:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    completion_criteria: [drift_classified]
+    agent_prompt: file://prompts/drift_classify.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: drift_classification
+  draft_sync_plan:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy, mutate_infrastructure]
+    max_retries: 2
+    completion_criteria: [sync_planned]
+    agent_prompt: file://prompts/drift_sync_plan.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: sync_plan
+  human_review:
+    adapter_type: fake
+    max_retries: 0
+    completion_criteria: [report_present]
+    agent_prompt: Review drift report and sync plan. Apply changes one environment at a time.
+    timeout_seconds: 86400
+  done:
+    adapter_type: fake
+    max_retries: 0
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60

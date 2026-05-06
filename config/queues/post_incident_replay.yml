@@ -1,0 +1,83 @@
+name: Post-Incident Replay
+slug: post_incident_replay
+stages:
+  - ingest_artifacts
+  - reconstruct_timeline
+  - analyze_root_cause
+  - evaluate_response
+  - draft_updates
+  - human_review
+  - done
+config:
+  default_max_retries: 2
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 0
+stage_configs:
+  ingest_artifacts:
+    adapter_type: inline_claude
+    model_override: claude-haiku-4-5-20251001
+    allowed_skills: [read_repo, query_sentry, query_slack]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    completion_criteria: [artifacts_ingested]
+    agent_prompt: file://prompts/incident_ingest.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: incident_artifacts
+  reconstruct_timeline:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    completion_criteria: [timeline_reconstructed]
+    agent_prompt: file://prompts/incident_timeline.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: incident_timeline
+  analyze_root_cause:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    completion_criteria: [root_cause_analyzed]
+    agent_prompt: file://prompts/incident_root_cause.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: root_cause_analysis
+  evaluate_response:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [edit_files, deploy]
+    max_retries: 1
+    completion_criteria: [response_evaluated]
+    agent_prompt: file://prompts/incident_evaluate.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: response_evaluation
+  draft_updates:
+    adapter_type: inline_claude
+    model_override: claude-sonnet-4-20250514
+    allowed_skills: [read_repo]
+    forbidden_skills: [deploy]
+    max_retries: 2
+    completion_criteria: [updates_drafted]
+    agent_prompt: file://prompts/incident_draft_updates.md
+    timeout_seconds: 600
+    adapter_config:
+      output_artifact_kind: incident_updates
+  human_review:
+    adapter_type: fake
+    max_retries: 0
+    completion_criteria: [report_present]
+    agent_prompt: Review incident analysis, root cause, and proposed improvements.
+    timeout_seconds: 86400
+  done:
+    adapter_type: fake
+    max_retries: 0
+    completion_criteria: [report_present]
+    agent_prompt: Terminal state.
+    timeout_seconds: 60

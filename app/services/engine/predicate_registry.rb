@@ -13,6 +13,7 @@ module Engine
       "security_reviewed" => Predicates::SecurityReviewed,
       "coverage_checked" => Predicates::CoverageChecked,
       "clusters_created" => Predicates::ClustersCreated,
+      "configs_collected" => Predicates::ConfigsCollected,
       "assessment_complete" => Predicates::AssessmentComplete,
       "candidates_identified" => Predicates::CandidatesIdentified,
       "removals_verified" => Predicates::RemovalsVerified,
@@ -46,7 +47,10 @@ module Engine
       "impact_observed" => Predicates::ImpactObserved,
       "recovery_evaluated" => Predicates::RecoveryEvaluated,
       "alerts_detected" => Predicates::AlertsDetected,
+      "damage_assessed" => Predicates::DamageAssessed,
       "diagnosis_produced" => Predicates::DiagnosisProduced,
+      "diff_produced" => Predicates::DiffProduced,
+      "drift_classified" => Predicates::DriftClassified,
       "runbook_selected" => Predicates::RunbookSelected,
       "runbook_executed" => Predicates::RunbookExecuted,
       "recovery_verified" => Predicates::RecoveryVerified,
@@ -58,13 +62,22 @@ module Engine
       "dependencies_mapped" => Predicates::DependenciesMapped,
       "risk_assessed" => Predicates::RiskAssessed,
       "rotation_planned" => Predicates::RotationPlanned,
+      "artifacts_ingested" => Predicates::ArtifactsIngested,
       "audit_produced" => Predicates::AuditProduced,
       "upgrade_plan_produced" => Predicates::UpgradePlanProduced,
       "upgrade_drafted" => Predicates::UpgradeDrafted,
       "impact_mapped" => Predicates::ImpactMapped,
       "risks_enumerated" => Predicates::RisksEnumerated,
+      "repairs_drafted" => Predicates::RepairsDrafted,
+      "response_evaluated" => Predicates::ResponseEvaluated,
       "rollback_drafted" => Predicates::RollbackDrafted,
-      "rollback_tested" => Predicates::RollbackTested
+      "rollback_tested" => Predicates::RollbackTested,
+      "root_cause_analyzed" => Predicates::RootCauseAnalyzed,
+      "rules_defined" => Predicates::RulesDefined,
+      "sync_planned" => Predicates::SyncPlanned,
+      "timeline_reconstructed" => Predicates::TimelineReconstructed,
+      "updates_drafted" => Predicates::UpdatesDrafted,
+      "violations_scanned" => Predicates::ViolationsScanned
     }.freeze
 
     def self.resolve(name)
