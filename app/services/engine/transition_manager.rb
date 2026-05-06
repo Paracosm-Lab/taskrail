@@ -65,10 +65,23 @@ module Engine
         )
 
         spawn_cross_queue_items!(from_stage: from_stage)
+        PipeEvaluator.call(work_item: @work_item, from_stage: from_stage)
       end
     end
 
     def spawn_cross_queue_items!(from_stage:)
+      # Apply the same depth limit as pipes to prevent runaway agent-initiated spawns
+      depth = pipe_depth(@work_item)
+      if depth >= Engine::EngineConfig.instance.max_pipe_depth
+        @work_item.transition_logs.create!(
+          from_stage: from_stage,
+          to_stage: @work_item.stage_name,
+          trigger: "pipe_limit_reached",
+          details: { pipe_slug: nil, limit_type: "max_depth_spawn", current_count: depth, max: Engine::EngineConfig.instance.max_pipe_depth }
+        )
+        return
+      end
+
       report = @claim.reports.success.where(stage_name: from_stage).order(created_at: :desc, id: :desc).first
       spawn_items = normalized_spawn_items(report)
       return if spawn_items.blank?
@@ -375,6 +388,16 @@ module Engine
 
     def review_report
       @review_report ||= @claim.reports.where(stage_name: "review").order(created_at: :desc).first
+    end
+
+    def pipe_depth(work_item)
+      depth = work_item.pipe_id.present? ? 1 : 0
+      current = work_item
+      while current.parent_id.present?
+        current = WorkItem.find(current.parent_id)
+        depth += 1 if current.pipe_id.present?
+      end
+      depth
     end
   end
 end

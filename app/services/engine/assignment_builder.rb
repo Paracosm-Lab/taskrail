@@ -72,7 +72,7 @@ module Engine
     end
 
     def upstream_artifacts
-      @work_item.artifacts.where.not(claim_id: @claim.id).order(:created_at).map do |artifact|
+      @work_item.artifacts.where("claim_id != ? OR claim_id IS NULL", @claim.id).order(:created_at).map do |artifact|
         { "kind" => artifact.kind, "data" => artifact.data }
       end
     end
