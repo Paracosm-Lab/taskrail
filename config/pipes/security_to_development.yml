@@ -1,0 +1,32 @@
+# config/pipes/security_to_development.yml
+name: Security to Development
+slug: security_to_development
+
+from:
+  queue: security_scan
+  stage: classify_severity
+
+when:
+  artifact_kind: severity_report
+  conditions:
+    - field: "findings[].severity"
+      operator: includes
+      value: ["critical", "high"]
+
+to:
+  queue: development
+  stage: intake
+
+transform:
+  artifacts:
+    - from_kind: severity_report
+      to_kind: input_findings
+    - from_kind: vulnerability_scan
+      to_kind: input_scan
+  tags:
+    risk: high
+    source_pipeline: security_scan
+  title_template: "Fix: {{source.title}} — high-severity findings"
+
+limits:
+  max_children: 5
