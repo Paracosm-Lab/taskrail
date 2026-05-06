@@ -18,8 +18,10 @@ test:
 production:
   primary: &primary_production
     <<: *default
-    database: stupidclaw_production
-    username: stupidclaw
+    host: <%= ENV.fetch("POSTGRES_HOST", "localhost") %>
+    port: <%= ENV.fetch("POSTGRES_PORT", 5432) %>
+    database: <%= ENV.fetch("POSTGRES_DB", "stupidclaw_production") %>
+    username: <%= ENV.fetch("POSTGRES_USER", "stupidclaw") %>
     password: <%= ENV["STUPIDCLAW_DATABASE_PASSWORD"] %>
   cache:
     <<: *primary_production

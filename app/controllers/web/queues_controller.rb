@@ -3,7 +3,7 @@ module Web
     before_action :set_queue, only: [:show, :board]
 
     def index
-      @queues = WorkQueue.order(:slug).map do |q|
+      @queues = WorkQueue.order(:category, :name).map do |q|
         counts = q.work_items.group(:status).count
                   .transform_keys { |k| WorkItem.statuses.key(k) }
         { queue: q, counts: counts }

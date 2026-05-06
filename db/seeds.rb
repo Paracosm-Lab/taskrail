@@ -11,6 +11,7 @@ Rails.root.glob("config/queues/*.yml").sort.each do |queue_path|
   queue = WorkQueue.find_or_initialize_by(slug: queue_config.fetch("slug"))
   queue.update!(
     name: queue_config.fetch("name"),
+    category: queue_config.fetch("category", nil),
     stages: queue_config.fetch("stages"),
     config: queue_config.fetch("config", {})
   )

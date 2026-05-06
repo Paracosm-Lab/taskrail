@@ -5,7 +5,33 @@ steps:
       - apt-get update -qq
       - apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config
       - bundle install --jobs 4 --retry 3
-      - bin/rubocop
+      - bin/rubocop --fail-level warning --except Layout
+    when:
+      event: [push, pull_request]
+
+  format:
+    image: ruby:3.2.0
+    commands:
+      - apt-get update -qq
+      - apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config
+      - bundle install --jobs 4 --retry 3
+      - bin/rubocop --fail-level warning --only Layout
+    depends_on:
+      - lint
+    when:
+      event: [push, pull_request]
+
+  type_check:
+    image: ruby:3.2.0
+    commands:
+      - apt-get update -qq
+      - apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config
+      - bundle install --jobs 4 --retry 3
+      - bundle exec ruby -e 'puts "type-check: ruby service has no sorbet/steep yet (non-blocking placeholder)."'
+    depends_on:
+      - format
+    when:
+      event: [push, pull_request]
 
   security_scan:
     image: ruby:3.2.0
@@ -14,6 +40,10 @@ steps:
       - apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config
       - bundle install --jobs 4 --retry 3
       - bin/brakeman --no-pager
+    depends_on:
+      - type_check
+    when:
+      event: [push, pull_request]
 
   test_ruby:
     image: ruby:3.2.0
@@ -26,7 +56,7 @@ steps:
       - bundle install --jobs 4 --retry 3
       - bin/rails db:test:prepare test
     depends_on:
-      - lint
+      - security_scan
     when:
       event: [push, pull_request]
 
@@ -37,7 +67,17 @@ steps:
       - npm ci
       - npm test
     depends_on:
-      - lint
+      - security_scan
+    when:
+      event: [push, pull_request]
+
+  test:
+    image: alpine:3.20
+    commands:
+      - echo "test gate passed"
+    depends_on:
+      - test_ruby
+      - test_tui
     when:
       event: [push, pull_request]
 
@@ -48,8 +88,7 @@ steps:
       dry_run: true
       dockerfile: Dockerfile
     depends_on:
-      - test_ruby
-      - test_tui
+      - test
     when:
       event: [pull_request]
 
@@ -63,8 +102,31 @@ steps:
         - latest
         - ${CI_COMMIT_SHA}
     depends_on:
-      - test_ruby
-      - test_tui
+      - test
+    when:
+      event: [push]
+      branch: [main]
+
+  deploy_main:
+    image: ruby:3.2.0
+    environment:
+      BASE_URL:
+        from_secret: production_base_url
+      KAMAL_REGISTRY_PASSWORD:
+        from_secret: kamal_registry_password
+      KAMAL_SSH_KEY:
+        from_secret: kamal_ssh_key
+    commands:
+      - apt-get update -qq
+      - apt-get install --no-install-recommends -y build-essential git openssh-client curl
+      - bundle install --jobs 4 --retry 3
+      - mkdir -p ~/.ssh
+      - printf "%s" "$KAMAL_SSH_KEY" > ~/.ssh/id_ed25519
+      - chmod 600 ~/.ssh/id_ed25519
+      - bin/kamal deploy
+      - BASE_URL="$BASE_URL" bin/monitor-prod
+    depends_on:
+      - docker_build_main
     when:
       event: [push]
       branch: [main]

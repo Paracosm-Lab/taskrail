@@ -1,4 +1,5 @@
 name: Incident Readiness Scoring
+category: Operations
 slug: incident_readiness
 stages:
   - inventory_services

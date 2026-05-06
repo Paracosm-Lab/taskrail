@@ -43,30 +43,62 @@
   </script>
   <%= javascript_importmap_tags %>
 </head>
-<body class="bg-base text-text min-h-screen font-mono">
-  <!-- Top nav -->
-  <nav class="bg-mantle border-b border-surface0 px-4 py-2 flex items-center gap-6 text-sm">
-    <%= link_to "StupidClaw", root_path, class: "text-mauve font-bold" %>
-    <div class="flex items-center gap-1">
-      <% all_queues.each do |q| %>
-        <%= link_to q.slug,
-              queue_path(q.slug),
-              class: "px-2 py-0.5 rounded hover:bg-surface0 #{request.path.include?(q.slug) ? 'text-blue border-b border-blue' : 'text-overlay0'}" %>
-      <% end %>
-    </div>
-    <div class="ml-auto">
-      <%= link_to "Pipes", pipes_path, class: "text-overlay0 hover:text-text" %>
-    </div>
-  </nav>
+<body class="bg-base text-text min-h-screen font-mono flex flex-col">
 
-  <main class="p-4">
-    <% if flash[:notice] %>
-      <div class="mb-4 px-3 py-2 bg-surface0 rounded text-green text-sm"><%= flash[:notice] %></div>
+  <!-- Top bar -->
+  <header class="bg-mantle border-b border-surface0 px-5 py-3 flex items-center flex-shrink-0">
+    <%= link_to root_path, class: "flex items-center gap-2 text-mauve font-bold text-sm" do %>
+      <span>◈</span>
+      <span>StupidClaw</span>
     <% end %>
-    <% if flash[:alert] %>
-      <div class="mb-4 px-3 py-2 bg-surface0 rounded text-red text-sm"><%= flash[:alert] %></div>
-    <% end %>
-    <%= yield %>
-  </main>
+    <div class="ml-auto flex items-center gap-3 text-xs text-overlay0">
+      <span>dev console</span>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden">
+
+    <!-- Left sidebar -->
+    <aside class="w-52 flex-shrink-0 bg-mantle border-r border-surface0 flex flex-col overflow-y-auto">
+
+      <div class="px-3 pt-4 pb-2">
+        <div class="text-xs font-semibold text-overlay0 uppercase tracking-widest px-2 mb-2">Queues</div>
+
+        <% queues_by_category.each do |category, queues| %>
+          <div class="mb-3">
+            <div class="text-xs text-overlay1 px-2 py-1 font-medium"><%= category %></div>
+            <% queues.each do |q| %>
+              <%= link_to queue_path(q.slug),
+                    class: "flex items-center gap-2 px-2 py-1 rounded text-xs transition-colors #{request.path == queue_path(q.slug) || request.path == board_queue_path(q.slug) ? 'bg-surface0 text-text' : 'text-overlay0 hover:text-text hover:bg-surface0'}" do %>
+                <span class="w-1.5 h-1.5 rounded-full bg-surface1 flex-shrink-0"></span>
+                <%= q.name %>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="mt-auto border-t border-surface0 px-3 py-3">
+        <%= link_to pipes_path,
+              class: "flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors #{request.path == pipes_path ? 'bg-surface0 text-text' : 'text-overlay0 hover:text-text hover:bg-surface0'}" do %>
+          <span>⇢</span>
+          Pipes
+        <% end %>
+      </div>
+
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 overflow-y-auto p-5">
+      <% if flash[:notice] %>
+        <div class="mb-4 px-3 py-2 bg-surface0 rounded text-green text-sm"><%= flash[:notice] %></div>
+      <% end %>
+      <% if flash[:alert] %>
+        <div class="mb-4 px-3 py-2 bg-surface0 rounded text-red text-sm"><%= flash[:alert] %></div>
+      <% end %>
+      <%= yield %>
+    </main>
+
+  </div>
 </body>
 </html>

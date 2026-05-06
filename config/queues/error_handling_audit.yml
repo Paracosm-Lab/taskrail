@@ -1,4 +1,5 @@
 name: Error Handling Audit
+category: Development
 slug: error_handling_audit
 stages:
   - scan_error_handling

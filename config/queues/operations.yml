@@ -1,4 +1,5 @@
 name: Operations
+category: Operations
 slug: operations
 stages:
   - ingest_signals

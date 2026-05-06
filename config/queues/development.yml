@@ -1,4 +1,5 @@
 name: Development
+category: Development
 slug: development
 stages:
   - intake

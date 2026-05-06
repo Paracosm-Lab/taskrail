@@ -1,4 +1,5 @@
 name: Chaos Response
+category: Operations
 slug: chaos_response
 stages:
   - detect_alerts

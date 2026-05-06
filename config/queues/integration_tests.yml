@@ -1,4 +1,5 @@
 name: Integration Test Generator
+category: Development
 slug: integration_tests
 stages:
   - map_user_flows

@@ -1,4 +1,5 @@
 name: Post-Incident Replay
+category: Operations
 slug: post_incident_replay
 stages:
   - ingest_artifacts

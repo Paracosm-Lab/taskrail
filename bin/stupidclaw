@@ -155,6 +155,7 @@ class StupidClawCli
     checks = [
       { path: "/api/v1/queues", expect_json: true, label: "queues endpoint" },
       { path: "/api/v1/costs", expect_json: true, label: "costs endpoint" },
+      { path: "/health", expect_json: true, label: "service health endpoint" },
       { path: "/up", expect_json: false, label: "rails health endpoint" }
     ]
 

@@ -1,4 +1,5 @@
 name: Data Integrity Validator
+category: Data
 slug: data_integrity
 stages:
   - define_rules

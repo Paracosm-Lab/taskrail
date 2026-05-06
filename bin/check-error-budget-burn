@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+METRIC_URL="${METRIC_URL:-}"
+THRESHOLD="${THRESHOLD:-14}"
+if [ -z "${METRIC_URL}" ]; then
+  echo "usage: METRIC_URL=<prom-query-endpoint> [THRESHOLD=14] bin/check-error-budget-burn" >&2
+  exit 1
+fi
+
+value=$(curl -fsS "${METRIC_URL}" | tr -d '\n' | sed -E 's/[^0-9\.\-]//g')
+if [ -z "${value}" ]; then
+  echo "could not parse burn-rate value" >&2
+  exit 1
+fi
+
+awk -v value="${value}" -v threshold="${THRESHOLD}" 'BEGIN { exit !(value <= threshold) }' || {
+  echo "burn rate too high: ${value} > ${THRESHOLD}" >&2
+  exit 1
+}
+
+echo "burn rate ok: ${value}"

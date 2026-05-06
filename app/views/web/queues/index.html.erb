@@ -1,19 +1,37 @@
-<h1 class="text-xl font-bold text-mauve mb-4">Queues</h1>
+<h1 class="text-xl font-bold text-mauve mb-5">Overview</h1>
 
-<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-  <% @queues.each do |entry| %>
-    <% q = entry[:queue] %>
-    <% counts = entry[:counts] %>
-    <%= link_to queue_path(q.slug), class: "block bg-mantle rounded p-4 hover:bg-surface0 transition-colors" do %>
-      <div class="font-bold text-text mb-2"><%= q.slug %></div>
-      <div class="text-xs text-overlay0 mb-3"><%= q.stages.count %> stages</div>
-      <div class="flex gap-3 text-xs">
-        <span class="text-blue"><%= counts["pending"].to_i %> pending</span>
-        <span class="text-peach"><%= counts["claimed"].to_i %> claimed</span>
-        <span class="text-red"><%= counts["blocked"].to_i %> blocked</span>
-        <span class="text-mauve"><%= counts["waiting"].to_i %> waiting</span>
-        <span class="text-green ml-auto"><%= counts["completed"].to_i %> done</span>
-      </div>
-    <% end %>
-  <% end %>
-</div>
+<% grouped = @queues.group_by { |e| e[:queue].category || "Uncategorized" } %>
+
+<% grouped.each do |category, entries| %>
+  <div class="mb-7">
+    <div class="text-xs font-semibold text-overlay0 uppercase tracking-widest mb-3"><%= category %></div>
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <% entries.each do |entry| %>
+        <% q = entry[:queue] %>
+        <% counts = entry[:counts] %>
+        <%= link_to queue_path(q.slug), class: "block bg-mantle rounded p-3 hover:bg-surface0 transition-colors" do %>
+          <div class="font-medium text-text text-sm mb-2"><%= q.name %></div>
+          <div class="flex flex-wrap gap-2 text-xs">
+            <% if counts["pending"].to_i > 0 %>
+              <span class="text-blue"><%= counts["pending"].to_i %> pending</span>
+            <% end %>
+            <% if counts["claimed"].to_i > 0 %>
+              <span class="text-peach"><%= counts["claimed"].to_i %> claimed</span>
+            <% end %>
+            <% if counts["blocked"].to_i > 0 %>
+              <span class="text-red"><%= counts["blocked"].to_i %> blocked</span>
+            <% end %>
+            <% if counts["waiting"].to_i > 0 %>
+              <span class="text-mauve"><%= counts["waiting"].to_i %> waiting</span>
+            <% end %>
+            <% total_active = counts.values.sum %>
+            <% if total_active == 0 %>
+              <span class="text-overlay0">idle</span>
+            <% end %>
+            <span class="text-green ml-auto"><%= counts["completed"].to_i %> done</span>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+<% end %>
