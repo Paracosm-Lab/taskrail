@@ -1,4 +1,4 @@
-class CreateStupidclawCoreModels < ActiveRecord::Migration[8.0]
+class CreateTaskrailCoreModels < ActiveRecord::Migration[8.0]
   def change
     create_table :work_queues, id: :uuid do |t|
       t.string :name, null: false

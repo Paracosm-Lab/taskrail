@@ -2,8 +2,8 @@ default: &default
   adapter: postgresql
   encoding: unicode
   host: <%= ENV.fetch("POSTGRES_HOST", "localhost") %>
-  username: <%= ENV.fetch("POSTGRES_USER", "stupidclaw") %>
-  password: <%= ENV.fetch("POSTGRES_PASSWORD", "stupidclaw") %>
+  username: <%= ENV.fetch("POSTGRES_USER", "taskrail") %>
+  password: <%= ENV.fetch("POSTGRES_PASSWORD", "taskrail") %>
   port: <%= ENV.fetch("POSTGRES_PORT", 5433) %>
   pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5) %>
 
@@ -21,7 +21,7 @@ production:
     host: <%= ENV.fetch("POSTGRES_HOST", "localhost") %>
     port: <%= ENV.fetch("POSTGRES_PORT", 5432) %>
     database: <%= ENV.fetch("POSTGRES_DB", "taskrail_production") %>
-    username: <%= ENV.fetch("POSTGRES_USER", "stupidclaw") %>
+    username: <%= ENV.fetch("POSTGRES_USER", "taskrail") %>
     password: <%= ENV["TASKRAIL_DATABASE_PASSWORD"] %>
   cache:
     <<: *primary_production
