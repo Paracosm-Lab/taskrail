@@ -36,6 +36,18 @@ RSpec.describe "Web::WorkItems", type: :request do
     end
   end
 
+  describe "GET /work_items/:id — claims" do
+    let!(:claim) do
+      Claim.create!(work_item: work_item, agent_type: "inline_claude",
+                    status: "completed", started_at: 5.minutes.ago, completed_at: Time.current)
+    end
+
+    it "includes the adapter type in the response" do
+      get "/work_items/#{work_item.id}"
+      expect(response.body).to include("inline_claude")
+    end
+  end
+
   describe "GET /work_items/:id — artifacts" do
     let!(:claim) do
       Claim.create!(work_item: work_item, agent_type: "inline_claude",

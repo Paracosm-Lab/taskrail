@@ -1,1 +1,52 @@
-<div>claims</div>
+<% if claims.empty? %>
+  <div class="text-overlay0 text-sm text-center py-8">No claims yet.</div>
+<% else %>
+  <div class="flex flex-col gap-3">
+    <% claims.each_with_index do |claim, i| %>
+      <% trace = claim.trace %>
+      <% report = claim.reports.where(status: :success).order(:created_at).last %>
+      <% claim_artifacts = claim.artifacts.order(:created_at) %>
+      <div class="bg-surface0 rounded p-3">
+        <!-- Claim header -->
+        <div class="flex items-center gap-3 mb-2">
+          <span class="text-text font-semibold text-sm">#<%= i + 1 %> — <%= claim.agent_type %></span>
+          <span class="text-xs px-1.5 py-0.5 rounded
+                       <%= claim.completed? ? 'bg-green text-base' : claim.failed? ? 'bg-red text-base' : 'bg-peach text-base' %>">
+            <%= claim.status %>
+          </span>
+          <% if trace %>
+            <span class="text-overlay0 text-xs ml-auto">
+              $<%= "%.4f" % (trace.total_cost_cents.to_f / 100) %>
+              · <%= trace.total_duration_ms ? "#{(trace.total_duration_ms / 1000.0).round(1)}s" : "—" %>
+            </span>
+          <% end %>
+        </div>
+
+        <!-- Timestamps -->
+        <div class="text-overlay0 text-xs mb-2">
+          Started: <%= claim.started_at&.strftime("%H:%M:%S") %>
+          <% if claim.completed_at %>
+            · Ended: <%= claim.completed_at.strftime("%H:%M:%S") %>
+          <% end %>
+        </div>
+
+        <!-- Artifacts produced -->
+        <% if claim_artifacts.any? %>
+          <div class="flex flex-wrap gap-1 mb-2">
+            <% claim_artifacts.each do |a| %>
+              <span class="text-xs px-1.5 py-0.5 bg-crust rounded text-mauve font-mono"><%= a.kind %></span>
+            <% end %>
+          </div>
+        <% end %>
+
+        <!-- Report -->
+        <% if report %>
+          <details class="mt-1">
+            <summary class="text-overlay0 text-xs cursor-pointer">Report ▶</summary>
+            <pre class="mt-1 bg-crust rounded p-2 text-xs text-text overflow-x-auto"><%= JSON.pretty_generate(report.body) %></pre>
+          </details>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
