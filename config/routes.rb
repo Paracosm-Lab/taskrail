@@ -12,6 +12,9 @@ Rails.application.routes.draw do
         end
       end
 
+      get "pipes", to: "pipes#index"
+      get "pipes/:slug", to: "pipes#show"
+
       get "costs", to: "costs#index"
       get "costs/work_items/:id", to: "costs#work_item"
       get "digest", to: "digests#show"
