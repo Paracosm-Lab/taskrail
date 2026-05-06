@@ -391,13 +391,7 @@ module Engine
     end
 
     def pipe_depth(work_item)
-      depth = work_item.pipe_id.present? ? 1 : 0
-      current = work_item
-      while current.parent_id.present?
-        current = WorkItem.find(current.parent_id)
-        depth += 1 if current.pipe_id.present?
-      end
-      depth
+      Engine::PipeDepth.for(work_item)
     end
   end
 end
