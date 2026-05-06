@@ -49,7 +49,7 @@ steps:
     image: ruby:3.2.0
     environment:
       RAILS_ENV: test
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/stupidclaw_test
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/taskrail_test
     commands:
       - apt-get update -qq
       - apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config
@@ -84,7 +84,7 @@ steps:
   docker_build_pr:
     image: woodpeckerci/plugin-docker-buildx
     settings:
-      repo: 192.168.1.76:5000/stupidclaw
+      repo: 192.168.1.76:5000/taskrail
       dry_run: true
       dockerfile: Dockerfile
     depends_on:
@@ -95,7 +95,7 @@ steps:
   docker_build_main:
     image: woodpeckerci/plugin-docker-buildx
     settings:
-      repo: 192.168.1.76:5000/stupidclaw
+      repo: 192.168.1.76:5000/taskrail
       dry_run: false
       dockerfile: Dockerfile
       tags:
@@ -137,4 +137,4 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: stupidclaw_test
+      POSTGRES_DB: taskrail_test
