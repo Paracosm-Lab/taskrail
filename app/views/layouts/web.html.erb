@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StupidClaw</title>
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            base: '#0f1117',
+            mantle: '#181825',
+            crust: '#11111b',
+            surface0: '#313244',
+            surface1: '#45475a',
+            surface2: '#585b70',
+            overlay0: '#6c7086',
+            overlay1: '#7f849c',
+            subtext0: '#a6adc8',
+            text: '#cdd6f4',
+            lavender: '#b4befe',
+            blue: '#89b4fa',
+            sapphire: '#74c7ec',
+            sky: '#89dceb',
+            teal: '#94e2d5',
+            green: '#a6e3a1',
+            yellow: '#f9e2af',
+            peach: '#fab387',
+            maroon: '#eba0ac',
+            red: '#f38ba8',
+            mauve: '#cba6f7',
+            pink: '#f5c2e7',
+            flamingo: '#f2cdcd',
+            rosewater: '#f5e0dc',
+          }
+        }
+      }
+    }
+  </script>
+  <%= javascript_importmap_tags %>
+</head>
+<body class="bg-base text-text min-h-screen font-mono">
+  <!-- Top nav -->
+  <nav class="bg-mantle border-b border-surface0 px-4 py-2 flex items-center gap-6 text-sm">
+    <%= link_to "StupidClaw", root_path, class: "text-mauve font-bold" %>
+    <div class="flex items-center gap-1">
+      <% all_queues.each do |q| %>
+        <%= link_to q.slug,
+              queue_path(q.slug),
+              class: "px-2 py-0.5 rounded hover:bg-surface0 #{request.path.include?(q.slug) ? 'text-blue border-b border-blue' : 'text-overlay0'}" %>
+      <% end %>
+    </div>
+    <div class="ml-auto">
+      <%= link_to "Pipes", pipes_path, class: "text-overlay0 hover:text-text" %>
+    </div>
+  </nav>
+
+  <main class="p-4">
+    <% if flash[:notice] %>
+      <div class="mb-4 px-3 py-2 bg-surface0 rounded text-green text-sm"><%= flash[:notice] %></div>
+    <% end %>
+    <% if flash[:alert] %>
+      <div class="mb-4 px-3 py-2 bg-surface0 rounded text-red text-sm"><%= flash[:alert] %></div>
+    <% end %>
+    <%= yield %>
+  </main>
+</body>
+</html>
