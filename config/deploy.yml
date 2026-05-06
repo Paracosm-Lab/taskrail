@@ -20,6 +20,7 @@ servers:
 proxy:
   ssl: true
   host: <%= ENV.fetch("KAMAL_APP_HOST", "stupidclaw.garageband.local") %>
+  app_port: 3000
 
 # Credentials for your image host.
 registry:
