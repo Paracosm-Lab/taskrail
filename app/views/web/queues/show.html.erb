@@ -1,2 +1,15 @@
-<h1><%= @queue.slug %></h1>
-<%= render "board" %>
+<div class="flex items-center gap-3 mb-4">
+  <h1 class="text-xl font-bold text-mauve"><%= @queue.slug %></h1>
+  <span class="text-overlay0 text-sm"><%= @queue.stages.count %> stages</span>
+  <div class="ml-auto">
+    <%= link_to "+ New", new_work_item_path(queue: @queue.slug),
+          class: "text-xs px-3 py-1 bg-surface0 rounded hover:bg-surface1 text-text" %>
+  </div>
+</div>
+
+<turbo-frame id="kanban-board"
+             src="<%= board_queue_path(@queue.slug) %>"
+             data-controller="auto-refresh"
+             data-auto-refresh-interval-value="5000">
+  <%= render "board" %>
+</turbo-frame>
