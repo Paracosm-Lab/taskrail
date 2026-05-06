@@ -22,8 +22,8 @@ proxy:
   host: <%= ENV.fetch("KAMAL_APP_HOST", "stupidclaw.garageband.local") %>
   app_port: 3000
   run:
-    http_port: 8088
-    https_port: 8448
+    http_port: 18080
+    https_port: 18443
     log_max_size: "10m"
     options:
       dns: 127.0.0.11
