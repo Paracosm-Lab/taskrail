@@ -31,3 +31,37 @@ Rails.root.glob("config/queues/*.yml").sort.each do |queue_path|
     )
   end
 end
+
+Rails.root.glob("config/pipes/*.yml").sort.each do |pipe_path|
+  next if File.basename(pipe_path) == ".gitkeep"
+
+  pipe_config = YAML.safe_load(File.read(pipe_path))
+
+  from_slug = pipe_config.dig("from", "queue")
+  to_slug = pipe_config.dig("to", "queue")
+
+  from_queue = WorkQueue.find_by(slug: from_slug) or
+    raise "Pipe #{pipe_path}: from.queue '#{from_slug}' not found — seed queues first"
+  to_queue = WorkQueue.find_by(slug: to_slug) or
+    raise "Pipe #{pipe_path}: to.queue '#{to_slug}' not found — seed queues first"
+
+  pipe = Pipe.find_or_initialize_by(slug: pipe_config.fetch("slug"))
+  pipe.assign_attributes(
+    name: pipe_config.fetch("name"),
+    from_queue: from_queue,
+    from_stage: pipe_config.dig("from", "stage"),
+    to_queue: to_queue,
+    to_stage: pipe_config.dig("to", "stage"),
+    when_config: pipe_config.fetch("when", {}),
+    transform_config: pipe_config.fetch("transform", {}),
+    limits: pipe_config.fetch("limits", {}),
+    enabled: pipe_config.fetch("enabled", true)
+  )
+
+  unless pipe.valid?
+    raise "Pipe #{pipe_path} is invalid: #{pipe.errors.full_messages.join(", ")}"
+  end
+
+  pipe.save!
+  puts "  pipe: #{pipe.slug} (#{pipe.persisted? ? "updated" : "created"})"
+end
