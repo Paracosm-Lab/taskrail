@@ -102,4 +102,46 @@ RSpec.describe "Web::WorkItems", type: :request do
       expect(response.body).to include("Child task")
     end
   end
+
+  describe "GET /work_items/new" do
+    it "returns 200 and shows the form" do
+      get "/work_items/new?queue=security_scan"
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("security_scan")
+    end
+  end
+
+  describe "POST /work_items" do
+    it "creates a work item and redirects to detail" do
+      post "/work_items", params: {
+        work_item: {
+          queue_slug: "security_scan",
+          title: "New scan",
+          spec_url: "https://example.com"
+        }
+      }
+      expect(response).to have_http_status(:redirect)
+      item = WorkItem.find_by(title: "New scan")
+      expect(item).to be_present
+      expect(response).to redirect_to(work_item_path(item))
+    end
+  end
+
+  describe "POST /work_items/:id/retry" do
+    before { work_item.update!(status: :blocked) }
+
+    it "sets status to pending and redirects" do
+      post "/work_items/#{work_item.id}/retry"
+      expect(response).to redirect_to(work_item_path(work_item))
+      expect(work_item.reload.status).to eq("pending")
+    end
+  end
+
+  describe "POST /work_items/:id/cancel" do
+    it "sets status to cancelled and redirects" do
+      post "/work_items/#{work_item.id}/cancel"
+      expect(response).to redirect_to(work_item_path(work_item))
+      expect(work_item.reload.status).to eq("cancelled")
+    end
+  end
 end
