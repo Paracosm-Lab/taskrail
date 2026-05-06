@@ -21,6 +21,12 @@ proxy:
   ssl: true
   host: <%= ENV.fetch("KAMAL_APP_HOST", "stupidclaw.garageband.local") %>
   app_port: 3000
+  run:
+    http_port: 8088
+    https_port: 8448
+    log_max_size: "10m"
+    options:
+      dns: 127.0.0.11
 
 # Credentials for your image host.
 registry:
