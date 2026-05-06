@@ -1,1 +1,33 @@
-<div>log</div>
+<% if logs.empty? %>
+  <div class="text-overlay0 text-sm text-center py-8">No transitions yet.</div>
+<% else %>
+  <table class="w-full text-xs">
+    <thead>
+      <tr class="text-overlay0 border-b border-surface0">
+        <th class="text-left pb-2 pr-4">From</th>
+        <th class="text-left pb-2 pr-4">To</th>
+        <th class="text-left pb-2 pr-4">Trigger</th>
+        <th class="text-left pb-2 pr-4">When</th>
+        <th class="text-left pb-2">Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% logs.each do |log| %>
+        <tr class="border-b border-surface0 align-top">
+          <td class="py-2 pr-4 text-blue font-mono"><%= log.from_stage %></td>
+          <td class="py-2 pr-4 text-blue font-mono"><%= log.to_stage %></td>
+          <td class="py-2 pr-4 text-peach"><%= log.trigger %></td>
+          <td class="py-2 pr-4 text-overlay0"><%= log.created_at.strftime("%H:%M:%S") %></td>
+          <td class="py-2">
+            <% if log.details.present? %>
+              <details>
+                <summary class="cursor-pointer text-overlay0">&#9658; details</summary>
+                <pre class="mt-1 bg-crust rounded p-2 text-text overflow-x-auto"><%= JSON.pretty_generate(log.details) %></pre>
+              </details>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

@@ -66,4 +66,40 @@ RSpec.describe "Web::WorkItems", type: :request do
       expect(response.body).to include("severity_report")
     end
   end
+
+  describe "GET /work_items/:id — transition log" do
+    let!(:log_entry) do
+      TransitionLog.create!(
+        work_item: work_item,
+        from_stage: "scan",
+        to_stage: "classify",
+        trigger: "completed"
+      )
+    end
+
+    it "shows the trigger in the response" do
+      get "/work_items/#{work_item.id}"
+      expect(response.body).to include("completed")
+    end
+  end
+
+  describe "GET /work_items/:id — children" do
+    let!(:child_queue) do
+      WorkQueue.create!(name: "Dev", slug: "development", stages: %w[intake done])
+    end
+    let!(:child) do
+      WorkItem.create!(
+        work_queue: child_queue,
+        title: "Child task",
+        spec_url: "https://example.com",
+        stage_name: "intake",
+        parent_id: work_item.id
+      )
+    end
+
+    it "shows the child title in the response" do
+      get "/work_items/#{work_item.id}"
+      expect(response.body).to include("Child task")
+    end
+  end
 end
