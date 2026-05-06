@@ -7,7 +7,7 @@
   <%= csrf_meta_tags %>
   <%= csp_meta_tag %>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
+  <script nonce="<%= content_security_policy_nonce %>">
     tailwind.config = {
       theme: {
         extend: {

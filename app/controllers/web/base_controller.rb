@@ -5,7 +5,7 @@ module Web
     private
 
     def all_queues
-      WorkQueue.order(:slug)
+      @all_queues ||= WorkQueue.order(:slug)
     end
     helper_method :all_queues
   end
