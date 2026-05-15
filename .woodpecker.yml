@@ -24,7 +24,7 @@ steps:
   secret-scan:
     image: zricethezav/gitleaks:latest
     commands:
-      - gitleaks detect --source . --verbose --no-banner
+      - gitleaks detect --source . --config .gitleaks.toml --verbose --no-banner
     depends_on:
       - lint
     when:
