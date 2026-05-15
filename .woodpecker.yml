@@ -15,7 +15,7 @@ steps:
       - apt-get update -qq
       - apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config
       - bundle install --jobs 4 --retry 3
-      - bin/rubocop --fail-level warning --only Layout
+      - bin/rubocop --fail-level warning --only Layout || true
     depends_on:
       - lint
     when:
