@@ -39,6 +39,13 @@
 /tui/dist/
 /tui/dist-test/
 
+# Legacy nested app layout generated artifacts.
+/app/log/*
+/app/tmp/*
+/app/tui/node_modules/
+/app/tui/dist/
+/app/tui/dist-test/
+
 # Local agent scratch/planning artifacts.
 /.hermes/
 /.superpowers/
