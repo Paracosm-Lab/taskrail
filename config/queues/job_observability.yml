@@ -1,4 +1,5 @@
 name: Background Job Observability
+category: Operations
 slug: job_observability
 stages:
   - scan_job_classes

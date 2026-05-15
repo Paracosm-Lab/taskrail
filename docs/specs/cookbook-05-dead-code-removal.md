@@ -4,7 +4,7 @@
 
 Six months of fast shipping. Gems nobody uses. Helpers nobody calls. Routes that go nowhere. Feature modules that were replaced but never deleted. The codebase grows but the useful code doesn't.
 
-StupidClaw scans for dead code and unused dependencies, verifies nothing references them, drafts removal PRs, runs the tests to confirm nothing breaks, and queues for review.
+TaskRail scans for dead code and unused dependencies, verifies nothing references them, drafts removal PRs, runs the tests to confirm nothing breaks, and queues for review.
 
 ## Queue: `dead_code_removal`
 

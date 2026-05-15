@@ -12,6 +12,6 @@ RSpec.describe "incident readiness fixtures" do
 
     contents = root.glob("**/*").select(&:file?).map(&:read).join("
 ")
-    expect(contents).not_to include("/Users/gregmushen/work/code/stupidclaw")
+    expect(contents).not_to include("/Users/gregmushen/work/code/taskrail")
   end
 end

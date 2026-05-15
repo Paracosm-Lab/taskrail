@@ -17,7 +17,7 @@ The `error_handling_audit` queue scans a repository for unsafe error handling, c
 
 ## Infrastructure Requirements
 
-This cookbook uses existing StupidClaw infrastructure:
+This cookbook uses existing Taskrail infrastructure:
 
 - `inline_claude` for scan/classify/draft stages.
 - `shell_script` for validation.

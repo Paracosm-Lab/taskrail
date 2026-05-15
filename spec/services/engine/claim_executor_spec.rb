@@ -26,6 +26,8 @@ RSpec.describe Engine::ClaimExecutor do
   end
 
   it "executes shell_script stages" do
+    original_workspace_root = ENV["TASKRAIL_WORKSPACE_ROOT"]
+    ENV["TASKRAIL_WORKSPACE_ROOT"] = Rails.root.to_s
     queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[test done])
     stage_config = StageConfig.create!(
       work_queue: queue,
@@ -44,6 +46,8 @@ RSpec.describe Engine::ClaimExecutor do
 
     expect(claim.reload).to be_completed
     expect(claim.artifacts.where(kind: "test_results").first.data["passed"]).to eq(true)
+  ensure
+    ENV["TASKRAIL_WORKSPACE_ROOT"] = original_workspace_root
   end
 
   it "executes inline_claude stages" do
@@ -93,12 +97,12 @@ RSpec.describe Engine::ClaimExecutor do
     claim = Claim.create!(work_item: work_item, agent_type: "codex", status: :active)
 
     submitter_result = CodexCliSubmitter::Result.new(
-      stdout: '{"id":"codex-run-1","branch":"stupidclaw/build-1"}',
+      stdout: '{"id":"codex-run-1","branch":"taskrail/build-1"}',
       stderr: "",
       exit_status: 0,
       duration_ms: 10,
       external_id: "codex-run-1",
-      metadata: { "id" => "codex-run-1", "branch" => "stupidclaw/build-1" }
+      metadata: { "id" => "codex-run-1", "branch" => "taskrail/build-1" }
     )
     allow(CodexCliSubmitter).to receive(:new).and_return(instance_double(CodexCliSubmitter, call: submitter_result))
 

@@ -1,4 +1,5 @@
 name: API Documentation Sync
+category: Development
 slug: api_docs_sync
 stages:
   - scan_endpoints

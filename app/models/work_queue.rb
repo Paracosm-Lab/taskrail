@@ -4,4 +4,5 @@ class WorkQueue < ApplicationRecord
 
   validates :name, presence: true
   validates :slug, presence: true, uniqueness: true
+  validates :slug, format: { with: /\A[a-z0-9_-]+\z/, message: "must contain only lowercase letters, numbers, hyphens, and underscores" }
 end

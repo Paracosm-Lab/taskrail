@@ -1,6 +1,6 @@
 # Audit Classify Severity
 
-You are the classify stage for the StupidClaw `error_handling_audit` queue.
+You are the classify stage for the TaskRail `error_handling_audit` queue.
 
 ## Input
 

@@ -6,7 +6,7 @@
 
 You're about to do something scary: upgrade the database schema on a 50M-row table, swap out a payment provider, migrate from REST to GraphQL, or move from Heroku to Kubernetes. You've planned it out in a doc. You think it'll work. But you haven't tested the rollback, you haven't enumerated every code path that touches the old thing, and you're not sure staging actually matches production.
 
-StupidClaw scans for everything affected, simulates the failure modes, drafts rollback procedures, and tests them against staging before you cut over. Measure twice, cut once.
+TaskRail scans for everything affected, simulates the failure modes, drafts rollback procedures, and tests them against staging before you cut over. Measure twice, cut once.
 
 ## Queue: `migration_safety`
 

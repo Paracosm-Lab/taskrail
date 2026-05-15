@@ -15,7 +15,7 @@ The `integration_tests` queue maps critical end-to-end user flows, identifies bo
 
 ## Deterministic fixture
 
-The E2E fixture in `spec/e2e/integration_tests_cookbook_spec.rb` uses StupidClaw itself as the integration target:
+The E2E fixture in `spec/e2e/integration_tests_cookbook_spec.rb` uses Taskrail itself as the integration target:
 
 - API request creates a `WorkItem`.
 - `Engine::Runner` claims each stage.
@@ -27,7 +27,7 @@ This touches the API, engine, adapter, database, report/artifact persistence, pr
 
 ## Infrastructure expectations
 
-This cookbook assumes the shared StupidClaw development/test infrastructure is available. It does not define new Docker Compose services. Queue YAML uses repo-relative prompt files and relies on adapter defaults for the working directory.
+This cookbook assumes the shared Taskrail development/test infrastructure is available. It does not define new Docker Compose services. Queue YAML uses repo-relative prompt files and relies on adapter defaults for the working directory.
 
 ## Focused tests
 

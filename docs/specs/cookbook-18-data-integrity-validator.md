@@ -8,7 +8,7 @@ Your database has orphaned records from a migration that didn't clean up properl
 
 You don't know about any of this until a customer reports something weird, or a query returns unexpected results, or a background job crashes on bad data. Data integrity problems are silent and cumulative — they get worse over time until something breaks visibly.
 
-StupidClaw scans your schema for integrity rules, queries the database for violations, categorizes the damage, and drafts repair scripts. Human review before any data is touched.
+TaskRail scans your schema for integrity rules, queries the database for violations, categorizes the damage, and drafts repair scripts. Human review before any data is touched.
 
 ## Queue: `data_integrity`
 

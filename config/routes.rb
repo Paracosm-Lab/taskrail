@@ -1,4 +1,14 @@
 Rails.application.routes.draw do
+  get "health", to: "health#show"
+
+  namespace :admin do
+    put "log-level", to: "settings#log_level"
+    put "trace-sample-rate", to: "settings#trace_sample_rate"
+    get "circuit-breaker", to: "settings#circuit_breaker"
+    put "circuit-breaker", to: "settings#update_circuit_breaker"
+    put "maintenance", to: "settings#maintenance"
+  end
+
   namespace :api do
     namespace :v1 do
       get "queues", to: "queues#index"
@@ -24,4 +34,23 @@ Rails.application.routes.draw do
   end
 
   get "up" => "rails/health#show", as: :rails_health_check
+
+  scope module: :web do
+    root "queues#index"
+
+    resources :queues, param: :slug, only: [:index, :show] do
+      member do
+        get :board
+      end
+    end
+
+    resources :work_items, only: [:show, :new, :create] do
+      member do
+        post :retry
+        post :cancel
+      end
+    end
+
+    get "pipes", to: "pipes#index"
+  end
 end

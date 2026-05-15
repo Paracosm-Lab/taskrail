@@ -29,7 +29,7 @@ module Engine
     rescue UnknownAdapter
       @claim.update!(status: :failed, completed_at: Time.current)
       raise
-    rescue StandardError
+    rescue StandardError, SecurityError
       @claim.update!(status: :failed, completed_at: Time.current)
       raise
     end

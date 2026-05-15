@@ -1,6 +1,6 @@
 # Audit Draft Fixes
 
-You are the draft fixes stage for the StupidClaw `error_handling_audit` queue.
+You are the draft fixes stage for the TaskRail `error_handling_audit` queue.
 
 ## Input
 

@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "logging audit cookbook" do
+RSpec.describe "logging audit cookbook", type: :request do
   let(:fixture_root) { Rails.root.join("test/fixtures/apps/bad_logging") }
 
   it "provides the configured logging_audit queue with docker-friendly shell validation" do
@@ -117,6 +117,36 @@ RSpec.describe "logging audit cookbook" do
       "file://prompts/logging_draft_standard.md",
       "file://prompts/logging_draft_fixes.md"
     )
+  end
+
+  it "drives a work item through all stages using the fake adapter" do
+    queue = WorkQueue.create!(
+      name: "Logging Audit Fake Fixture #{SecureRandom.hex(4)}",
+      slug: "logging-audit-fake-fixture-#{SecureRandom.hex(4)}",
+      stages: %w[scan_log_statements assess_quality draft_standard draft_fixes run_tests human_review done],
+      config: { "default_max_retries" => 0, "max_regression_loops" => 0 }
+    )
+    queue.stage_configs.create!(stage_name: "scan_log_statements", adapter_type: "fake", completion_criteria: ["log_inventory_produced"])
+    queue.stage_configs.create!(stage_name: "assess_quality", adapter_type: "fake", completion_criteria: ["logging_assessed"])
+    queue.stage_configs.create!(stage_name: "draft_standard", adapter_type: "fake", completion_criteria: ["standard_drafted"])
+    queue.stage_configs.create!(stage_name: "draft_fixes", adapter_type: "fake", completion_criteria: ["fixes_drafted"])
+    queue.stage_configs.create!(stage_name: "run_tests", adapter_type: "fake", completion_criteria: ["tests_passed"])
+    queue.stage_configs.create!(stage_name: "human_review", adapter_type: "fake", completion_criteria: ["report_present"])
+    queue.stage_configs.create!(stage_name: "done", adapter_type: "fake", completion_criteria: ["report_present"])
+
+    post "/api/v1/work_items", params: { queue: queue.slug, title: "Audit logging consistency", spec_url: "docs/specs/cookbook-06-logging-consistency-audit.md" }
+    expect(response).to have_http_status(:created)
+    work_item = WorkItem.find(JSON.parse(response.body).fetch("id"))
+    expect(work_item).to be_pending
+
+    15.times do
+      Engine::Runner.new.call
+      break if work_item.reload.completed?
+    end
+
+    expect(work_item).to be_completed
+    expect(work_item.stage_name).to eq("done")
+    expect(work_item.artifacts.pluck(:kind)).to include("log_inventory", "logging_assessment", "logging_standard", "fix_patches", "test_results")
   end
 
   it "covers the source cookbook spec stages, artifacts, and predicates" do

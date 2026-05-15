@@ -27,6 +27,15 @@ RSpec.describe Adapters::InlineClaudeAdapter do
     expect(result.report["exit_status"]).to eq(2)
   end
 
+  it "records trace timing and token cost fields" do
+    runner_result = ClaudeCliRunner::Result.new(stdout: "ok", stderr: "", exit_status: 0, duration_ms: 25)
+    allow(ClaudeCliRunner).to receive(:new).and_return(instance_double(ClaudeCliRunner, call: runner_result))
+
+    event = described_class.new.execute(assignment).trace_events.first
+
+    expect(event).to include("duration_ms" => 25, "tokens_in" => 0, "tokens_out" => 0, "cost_cents" => 0)
+  end
+
   def assignment
     {
       claim_id: 1,

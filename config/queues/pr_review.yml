@@ -1,4 +1,5 @@
 name: PR Review Pipeline
+category: Development
 slug: pr_review
 stages:
   - run_checks

@@ -4,7 +4,7 @@
 
 A startup codebase with spotty test coverage. Models, controllers, and services that shipped fast with no specs. Everyone agrees tests need to happen. Nobody wants to write them.
 
-StupidClaw scans the codebase, identifies untested code paths, generates specs, runs them, and iterates until they pass. Human review before merge.
+TaskRail scans the codebase, identifies untested code paths, generates specs, runs them, and iterates until they pass. Human review before merge.
 
 ## Queue: `test_backfill`
 
@@ -135,7 +135,7 @@ stage_configs:
 
 ### E2E Test Fixtures
 
-Use StupidClaw's own codebase as the target. Pick a model or service with known gaps, or create a small fixture app with deliberately untested code in `test/fixtures/apps/untested_app/`.
+Use TaskRail's own codebase as the target. Pick a model or service with known gaps, or create a small fixture app with deliberately untested code in `test/fixtures/apps/untested_app/`.
 
 ### Regression Loop
 

@@ -6,7 +6,7 @@
 
 PRs sit in the review queue for hours or days. When a human reviewer finally looks, they find linting failures, missing tests, a security issue, and an architectural violation — things that could have been caught automatically. The human reviewer's time gets wasted on mechanical checks instead of design judgment.
 
-StupidClaw runs a multi-stage automated review on every PR before a human touches it. Lint, test, security scan, architectural review, test coverage check. By the time a human reviewer opens the PR, the mechanical stuff is already done. They can focus on "is this the right approach?" instead of "did you run the linter?"
+TaskRail runs a multi-stage automated review on every PR before a human touches it. Lint, test, security scan, architectural review, test coverage check. By the time a human reviewer opens the PR, the mechanical stuff is already done. They can focus on "is this the right approach?" instead of "did you run the linter?"
 
 ## Queue: `pr_review`
 

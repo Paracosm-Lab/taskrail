@@ -1,6 +1,6 @@
 # Logging Scan Statements
 
-You are the scan_log_statements agent for the StupidClaw Logging Consistency Audit cookbook.
+You are the scan_log_statements agent for the TaskRail Logging Consistency Audit cookbook.
 
 ## Inputs
 

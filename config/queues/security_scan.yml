@@ -1,4 +1,5 @@
 name: Security Scan
+category: Security
 slug: security_scan
 stages:
   - scan_vulnerabilities

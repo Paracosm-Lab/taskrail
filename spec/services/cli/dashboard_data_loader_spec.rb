@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe Cli::DashboardDataLoader do
   it "loads dashboard data from the API" do
-    client = instance_double(Cli::StupidClawApiClient)
+    client = instance_double(Cli::TaskRailApiClient)
     allow(client).to receive(:get_json).with("/api/v1/queues/development/stages").and_return(
       "queue" => { "slug" => "development", "name" => "Development" },
       "stages" => [{ "name" => "build", "adapter_type" => "fake" }]
@@ -63,7 +63,7 @@ RSpec.describe Cli::DashboardDataLoader do
   end
 
   it "escapes queue slugs in path and query API calls" do
-    client = instance_double(Cli::StupidClawApiClient)
+    client = instance_double(Cli::TaskRailApiClient)
     allow(client).to receive(:get_json).with("/api/v1/queues/dev%26status%3Dblocked/stages").and_return("queue" => {}, "stages" => [])
     allow(client).to receive(:get_json).with("/api/v1/work_items?queue=dev%26status%3Dblocked").and_return("work_items" => [])
     allow(client).to receive(:get_json).with("/api/v1/costs").and_return({})
@@ -74,7 +74,7 @@ RSpec.describe Cli::DashboardDataLoader do
   end
 
   def dashboard_client_with_work_items(work_items)
-    instance_double(Cli::StupidClawApiClient).tap do |client|
+    instance_double(Cli::TaskRailApiClient).tap do |client|
       allow(client).to receive(:get_json).with("/api/v1/queues/development/stages").and_return("queue" => { "slug" => "development" }, "stages" => [])
       allow(client).to receive(:get_json).with("/api/v1/work_items?queue=development").and_return("work_items" => work_items)
       allow(client).to receive(:get_json).with("/api/v1/costs").and_return({})

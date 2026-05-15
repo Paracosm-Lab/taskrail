@@ -1,6 +1,6 @@
 # Logging Assess Quality
 
-You are the assess_quality agent for the StupidClaw Logging Consistency Audit cookbook.
+You are the assess_quality agent for the TaskRail Logging Consistency Audit cookbook.
 
 ## Inputs
 

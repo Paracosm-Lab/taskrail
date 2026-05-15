@@ -1,26 +1,40 @@
 # Incident Readiness Scoring Cookbook
 
-Source spec: `docs/specs/cookbook-11-incident-readiness-scoring.md`
-
 The `incident_readiness` queue audits services for operational readiness and produces a scorecard answering: if this service breaks tonight, are we ready?
 
-Stages:
-1. `inventory_services` inventories web, worker, cron, and infrastructure-backed services.
-2. `score_readiness` scores health checks, alerting, runbooks, dashboards, logging, error handling, resilience, and documentation.
-3. `identify_gaps` ranks service and platform gaps by risk and effort.
-4. `draft_improvements` drafts quick wins and recommends cross-queue work for larger fixes.
-5. `human_review` stops for review.
-6. `done` is terminal.
+## Problem Statement
 
-Artifacts:
-- `service_inventory`
-- `readiness_scores`
-- `gap_analysis`
-- `improvement_drafts`
+Most incident readiness gaps are discovered during real incidents. Alerts are too thin, runbooks are stale, ownership is unclear, dashboards are incomplete, and recovery steps have not been tested.
 
-Infrastructure notes:
-- The queue uses `inline_claude` and `fake` stages only.
-- Docker-friendly fixture files live under `spec/fixtures/incident_readiness`.
-- Shared Docker Compose adapter behavior belongs to the shared cookbook infrastructure plan and is not duplicated here.
+Taskrail turns readiness review into a repeatable queue.
 
-The scorecard report should use the standalone table format from the source spec so it can be shared directly with an operations or product team.
+## Stages
+
+```text
+inventory_services -> score_readiness -> identify_gaps -> draft_improvements -> human_review -> done
+```
+
+## Artifacts
+
+- `service_inventory`: services, jobs, schedules, dependencies, owners, and critical paths.
+- `readiness_scores`: alerting, runbook, dashboard, logging, ownership, and recovery scores.
+- `gap_analysis`: prioritized gaps by risk and effort.
+- `improvement_drafts`: patches, docs, runbook updates, or follow-up work recommendations.
+
+## Human Gate
+
+The queue stops for human review before recommendations are accepted or spawned into follow-up work.
+
+## Configurability
+
+Teams can change score dimensions, required evidence, service sources, thresholds, follow-up queues, and review policy.
+
+## Output Format
+
+The scorecard should be shareable with engineering and operations teams. It should clearly show:
+
+- service name
+- owner
+- readiness score
+- highest-risk gaps
+- recommended next steps

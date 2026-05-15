@@ -1,6 +1,6 @@
-# StupidClaw Cookbooks
+# TaskRail Cookbooks
 
-Cookbooks are executable examples for StupidClaw queues. Shared infrastructure lives here so each cookbook can focus on its queue, prompts, predicates, and fixture app instead of rebuilding fake services.
+Cookbooks are executable examples for TaskRail queues. Shared infrastructure lives here so each cookbook can focus on its queue, prompts, predicates, and fixture app instead of rebuilding fake services.
 
 ## Layout
 
@@ -27,5 +27,5 @@ curl -s -X POST http://localhost:4010/reset
 
 - Do not commit absolute checkout paths.
 - Use Rails-root-relative `file://cookbooks/prompts/...` prompt references.
-- Prefer adapter defaults for `working_directory`; StupidClaw's Docker Compose adapter defaults to `Rails.root.to_s`.
+- Prefer adapter defaults for `working_directory`; TaskRail's Docker Compose adapter defaults to `Rails.root.to_s`.
 - Cookbook queue YAML may reference `cookbooks/docker-compose.yml` as a Rails-root-relative compose file.

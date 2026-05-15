@@ -6,7 +6,7 @@
 
 Your Gemfile has 80 gems. 15 are outdated, 3 have known CVEs, and one major version bump has been sitting in the backlog for six months. Nobody wants to touch it because the last time someone upgraded a gem, it broke three things and took a day to fix.
 
-StupidClaw upgrades one dependency at a time, runs the tests after each, catches breaking changes early, and produces a clean PR per upgrade. The boring, risky, essential maintenance that never gets prioritized.
+TaskRail upgrades one dependency at a time, runs the tests after each, catches breaking changes early, and produces a clean PR per upgrade. The boring, risky, essential maintenance that never gets prioritized.
 
 ## Queue: `dependency_upgrade`
 

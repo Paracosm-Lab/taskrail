@@ -2,6 +2,16 @@ module Engine
   class AsyncClaimChecker
     def call
       Claim.active.where(async_execution: true).find_each do |claim|
+        if claim.heartbeat_stale?
+          claim.update!(
+            status: :failed,
+            async_execution: false,
+            completed_at: Time.current,
+            metadata: claim.metadata.merge("error" => "async heartbeat stale")
+          )
+          next
+        end
+
         next unless claim.assignment.dig("async", "provider") == "codex"
 
         stage_config = claim.work_item.work_queue.stage_configs.find_by!(stage_name: claim.work_item.stage_name)

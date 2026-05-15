@@ -8,7 +8,7 @@ Staging and production were identical six months ago. Since then, someone added 
 
 You deploy to staging, everything works. You deploy to production, it breaks — because staging isn't production anymore. Nobody knows how far they've drifted because nobody's compared them recently.
 
-StupidClaw diffs your environments, categorizes every divergence, assesses which ones are intentional vs. accidental, and drafts the changes to bring them back in sync.
+TaskRail diffs your environments, categorizes every divergence, assesses which ones are intentional vs. accidental, and drafts the changes to bring them back in sync.
 
 ## Queue: `infrastructure_drift`
 
@@ -175,4 +175,4 @@ Run weekly or after every production deploy. Track drift count over time. The go
 
 ### E2E Test Fixture
 
-Use StupidClaw's own Docker Compose files as the test case. Create a `docker-compose.staging.yml` and `docker-compose.production.yml` with deliberate differences: a version mismatch on Postgres, a missing Redis service in staging, different environment variables. The pipeline should detect all three and classify them correctly.
+Use TaskRail's own Docker Compose files as the test case. Create a `docker-compose.staging.yml` and `docker-compose.production.yml` with deliberate differences: a version mismatch on Postgres, a missing Redis service in staging, different environment variables. The pipeline should detect all three and classify them correctly.

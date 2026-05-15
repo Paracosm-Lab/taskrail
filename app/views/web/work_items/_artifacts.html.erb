@@ -1,0 +1,27 @@
+<% if artifacts.empty? %>
+  <div class="text-overlay0 text-sm text-center py-8">No artifacts yet.</div>
+<% else %>
+  <div class="flex flex-col gap-2">
+    <%
+      # Build claim index map: claim_id => sequential number
+      claim_index = claims.each_with_index.each_with_object({}) { |(c, i), h| h[c.id] = i + 1 }
+    %>
+    <% artifacts.each do |artifact| %>
+      <details class="bg-surface0 rounded group">
+        <summary class="flex items-center gap-3 px-3 py-2.5 cursor-pointer list-none">
+          <span class="text-mauve group-open:rotate-90 transition-transform text-xs">▶</span>
+          <span class="text-text font-semibold font-mono text-sm"><%= artifact.kind %></span>
+          <% if artifact.claim_id.nil? %>
+            <span class="text-xs px-1.5 py-0.5 bg-sapphire text-base rounded">pipe copy</span>
+          <% else %>
+            <span class="text-overlay0 text-xs">claim #<%= claim_index[artifact.claim_id] || "?" %></span>
+          <% end %>
+          <span class="text-overlay0 text-xs ml-auto"><%= time_ago_in_words(artifact.created_at) %> ago</span>
+        </summary>
+        <div class="px-3 pb-3 pt-1">
+          <pre class="bg-crust rounded p-3 text-xs text-text overflow-x-auto leading-relaxed"><%= JSON.pretty_generate(artifact.data) %></pre>
+        </div>
+      </details>
+    <% end %>
+  </div>
+<% end %>

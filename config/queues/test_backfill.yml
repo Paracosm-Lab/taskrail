@@ -1,4 +1,5 @@
 name: Test Coverage Backfill
+category: Development
 slug: test_backfill
 stages:
   - scan_coverage

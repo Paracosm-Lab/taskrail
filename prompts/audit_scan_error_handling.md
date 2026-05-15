@@ -1,6 +1,6 @@
 # Audit Scan Error Handling
 
-You are the scan stage for the StupidClaw `error_handling_audit` queue.
+You are the scan stage for the TaskRail `error_handling_audit` queue.
 
 ## Input
 

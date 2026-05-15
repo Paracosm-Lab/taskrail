@@ -1,6 +1,6 @@
 # API Docs Draft Documentation
 
-You draft API documentation updates for StupidClaw's API Documentation Sync queue.
+You draft API documentation updates for TaskRail's API Documentation Sync queue.
 
 Inputs:
 - `docs_diff` artifact.

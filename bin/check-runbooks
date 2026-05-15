@@ -1,0 +1,48 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "pathname"
+
+ROOT = Pathname.new(__dir__).join("..").expand_path
+RUNBOOK = ROOT.join("docs/runbooks/taskrail.md")
+
+unless RUNBOOK.exist?
+  warn "missing runbook file: #{RUNBOOK}"
+  exit 1
+end
+
+content = RUNBOOK.read
+sections = content.split(/^## /).drop(1)
+if sections.empty?
+  warn "no alert sections found (expected headings like: ## <alert-slug>)"
+  exit 1
+end
+
+required_labels = [
+  "**Alert:**",
+  "**Severity:**",
+  "**Fires when:**",
+  "**Meaning:**",
+  "### Investigate",
+  "### Diagnosis",
+  "### Fix A:",
+  "### Fix B:",
+  "### Escalate if"
+]
+
+errors = []
+sections.each do |raw|
+  heading, *rest = raw.lines
+  slug = heading.to_s.strip
+  body = rest.join
+  required_labels.each do |label|
+    errors << "section '#{slug}' missing '#{label}'" unless body.include?(label)
+  end
+end
+
+if errors.any?
+  warn errors.join("\n")
+  exit 1
+end
+
+puts "runbooks valid: #{sections.size} section(s)"

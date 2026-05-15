@@ -1,36 +1,40 @@
-# Runbook Draft: CRM Postgres Unavailable
-
-Human review required before production use.
+# CRM Postgres Unavailable
 
 ## Scope
 
-Failure Readiness cookbook fixture for `crm-service` staging alerts involving `ActiveRecord::ConnectionTimeoutError` and `PG::ConnectionBad` against `crm-postgres.internal`.
+Use this runbook when the CRM service cannot connect to its PostgreSQL database or when database saturation causes request failures. Human review required before destructive database operations.
 
 ## Observe
 
-```bash
+- Confirm database reachability:
+
+```sh
 pg_isready -h crm-postgres.internal -p 5432
-psql "$CRM_DATABASE_URL" -c "SELECT count(*), state FROM pg_stat_activity GROUP BY state;"
-psql "$CRM_DATABASE_URL" -c "SELECT pid, now() - xact_start AS age, query FROM pg_stat_activity WHERE state = 'idle in transaction' ORDER BY age DESC LIMIT 10;"
 ```
 
-Check alert context for `pool_size`, `checked_out`, `waiting`, `active_connections`, `max_connections`, and `idle_in_transaction`.
+- Check active sessions and long transactions:
+
+```sql
+SELECT pid, state, wait_event_type, wait_event, query
+FROM pg_stat_activity
+WHERE datname = 'crm_production'
+ORDER BY state, query_start;
+```
+
+- Look for `idle_in_transaction` sessions, lock waits, and connection pool exhaustion in application logs and metrics.
 
 ## Mitigate
 
-1. If Postgres is down, page the database owner and restart only through the approved staging/prod database control plane.
-2. If `idle_in_transaction` is above the reviewed threshold, terminate sessions older than five minutes after confirming they are safe.
-3. If app pools do not drain after database recovery, perform a rolling app restart.
+- Scale down nonessential background workers that are consuming CRM database connections.
+- Restart the CRM web process if connection pools are wedged after the database is reachable.
+- Terminate only clearly stale `idle_in_transaction` sessions after confirming ownership and impact.
 
 ## Verify
 
-```bash
-curl -fsS https://crm.staging.scribbl.test/health
-curl -fsS -X POST https://crm.staging.scribbl.test/sessions -d '{"token":"fixture"}'
-```
-
-Monitor Sentry for 15 minutes and confirm pool stats return to idle capacity.
+- `pg_isready` returns accepting connections.
+- CRM health checks pass for at least five minutes.
+- Error rate and database connection counts return to normal ranges.
 
 ## Escalate
 
-Escalate to DBA for unavailable Postgres, connection saturation by active queries, or unsafe session termination. Escalate to incident commander if customer-facing outage lasts more than 30 minutes.
+Human review required if database storage is full, replication is unhealthy, lock waits continue after mitigation, or any data repair is needed.

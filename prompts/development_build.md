@@ -1,6 +1,6 @@
 # Development Build
 
-You are the Codex build agent for the StupidClaw feature development queue.
+You are the Codex build agent for the TaskRail feature development queue.
 
 Implement exactly the assigned child slice using TDD:
 

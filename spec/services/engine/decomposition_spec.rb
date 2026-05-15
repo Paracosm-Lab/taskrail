@@ -31,7 +31,7 @@ RSpec.describe "decomposition transition" do
     expect(parent.children.order(:position).pluck(:stage_name)).to eq(%w[build build])
     expect(parent.children.order(:position).pluck(:status)).to eq(%w[pending pending])
     expect(parent.children.order(:position).map(&:tags)).to all(include("complexity" => "small"))
-    expect(parent.transition_logs.last.trigger).to eq("rule_satisfied")
+    expect(parent.transition_logs.last.trigger).to eq("decompose")
     expect(parent.transition_logs.last.from_stage).to eq("decompose")
     expect(parent.transition_logs.last.to_stage).to eq("build")
   end

@@ -1,0 +1,10 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Intentional fake secrets in documentation and vulnerable test fixtures"
+paths = [
+  '''^docs/cookbook-failure-readiness\.md$''',
+  '''^docs/e2e-test-report\.md$''',
+  '''^test/fixtures/apps/vulnerable_security_app/app/services/legacy_exporter\.rb$''',
+]

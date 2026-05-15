@@ -17,4 +17,4 @@ For each job, catalog:
 - dependencies such as databases, external APIs, storage, mailers, or other services
 - schedule such as cron, on-demand, event-driven, or unknown
 
-Return only JSON that StupidClaw can parse with a `job_inventory` artifact containing framework and jobs entries. Do not edit files in this stage.
+Return only JSON that TaskRail can parse with a `job_inventory` artifact containing framework and jobs entries. Do not edit files in this stage.

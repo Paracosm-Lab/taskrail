@@ -1,0 +1,42 @@
+<% if children.empty? %>
+  <div class="text-overlay0 text-sm text-center py-8">No children.</div>
+<% else %>
+  <table class="w-full text-xs">
+    <thead>
+      <tr class="text-overlay0 border-b border-surface0">
+        <th class="text-left pb-2 pr-4">Title</th>
+        <th class="text-left pb-2 pr-4">Queue</th>
+        <th class="text-left pb-2 pr-4">Status</th>
+        <th class="text-left pb-2">Origin</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% children.each do |child| %>
+        <tr class="border-b border-surface0">
+          <td class="py-2 pr-4">
+            <%= link_to child.title.truncate(60), work_item_path(child),
+                  class: "text-blue hover:underline" %>
+          </td>
+          <td class="py-2 pr-4 text-overlay0 font-mono"><%= child.work_queue.slug %></td>
+          <td class="py-2 pr-4">
+            <%
+              sc = {
+                "pending" => "text-blue", "claimed" => "text-peach",
+                "blocked" => "text-red", "waiting" => "text-mauve",
+                "completed" => "text-green", "cancelled" => "text-overlay0"
+              }.fetch(child.status, "text-overlay0")
+            %>
+            <span class="<%= sc %>"><%= child.status %></span>
+          </td>
+          <td class="py-2 text-overlay0">
+            <% if child.pipe_id %>
+              <span class="text-sapphire">pipe: <%= child.pipe&.slug %></span>
+            <% else %>
+              spawned
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

@@ -1,6 +1,6 @@
 # Development Test
 
-You are the shell validation stage for the StupidClaw feature development queue.
+You are the shell validation stage for the TaskRail feature development queue.
 
 Run tests, lint, and coverage checks without editing files. Produce artifacts with these shapes:
 

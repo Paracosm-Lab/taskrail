@@ -1,4 +1,5 @@
 name: Infrastructure Drift Detection
+category: Operations
 slug: infrastructure_drift
 stages:
   - collect_configs

@@ -1,0 +1,18 @@
+<div class="min-w-48 w-48 flex-shrink-0">
+  <div class="bg-mantle rounded p-3 h-full">
+    <div class="flex items-center justify-between mb-2 pb-2 border-b border-surface0">
+      <span class="text-blue text-xs font-bold truncate"><%= stage %></span>
+      <span class="text-overlay0 text-xs ml-1"><%= items.count %></span>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <% items.each do |item| %>
+        <%= render "card", item: item %>
+      <% end %>
+
+      <% if items.empty? %>
+        <div class="text-overlay0 text-xs text-center py-4">empty</div>
+      <% end %>
+    </div>
+  </div>
+</div>

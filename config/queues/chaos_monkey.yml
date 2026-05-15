@@ -1,4 +1,5 @@
 name: Chaos Monkey
+category: Operations
 slug: chaos_monkey
 stages:
   - plan_disruption

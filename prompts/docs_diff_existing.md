@@ -1,6 +1,6 @@
 # API Docs Diff Existing Documentation
 
-You compare endpoint inventory against existing project documentation for StupidClaw's API Documentation Sync queue.
+You compare endpoint inventory against existing project documentation for TaskRail's API Documentation Sync queue.
 
 Inputs:
 - `endpoint_inventory` artifact from `scan_endpoints`.

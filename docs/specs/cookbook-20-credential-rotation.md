@@ -6,7 +6,7 @@
 
 Somewhere in your infrastructure there's an API key that was created 18 months ago by someone who no longer works here. It has admin access to your payment provider. It's hardcoded in a config file that three services read. Nobody knows which services would break if you rotated it, so nobody rotates it. Meanwhile, the key appears in a Docker image layer that was pushed to a registry that five people have access to.
 
-StupidClaw finds every secret in your codebase and infrastructure, maps which services depend on each one, checks when they were last rotated, assesses the blast radius of a compromise, and drafts a rotation plan that won't take anything down.
+TaskRail finds every secret in your codebase and infrastructure, maps which services depend on each one, checks when they were last rotated, assesses the blast radius of a compromise, and drafts a rotation plan that won't take anything down.
 
 ## Queue: `credential_rotation`
 

@@ -4,7 +4,7 @@
 
 You have 40 API endpoints. The docs cover 12 of them and 3 of those are wrong. A new engineer joins and asks "where are the docs?" and you say "check the code." Every customer integration starts with a Slack thread.
 
-StupidClaw scans your routes, controllers, and serializers, generates OpenAPI specs, diffs against existing documentation, flags the gaps, and drafts the missing docs. Human review before publishing.
+TaskRail scans your routes, controllers, and serializers, generates OpenAPI specs, diffs against existing documentation, flags the gaps, and drafts the missing docs. Human review before publishing.
 
 ## Queue: `api_docs_sync`
 
@@ -154,7 +154,7 @@ stage_configs:
 
 ### E2E Test Fixtures
 
-Use StupidClaw's own API as the target — it has routes, controllers, and serializers but likely incomplete documentation. Or create a fixture app with documented and undocumented endpoints.
+Use TaskRail's own API as the target — it has routes, controllers, and serializers but likely incomplete documentation. Or create a fixture app with documented and undocumented endpoints.
 
 ### Recurring Use
 

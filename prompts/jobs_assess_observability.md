@@ -9,4 +9,4 @@ Classification rules:
 - `under_instrumented`: average score >= 1.0 and < 2.0
 - `blind`: average score < 1.0
 
-Include a human-readable scorecard in the success report body and return only JSON that StupidClaw can parse with an `observability_assessment` artifact. Do not edit files in this stage.
+Include a human-readable scorecard in the success report body and return only JSON that TaskRail can parse with an `observability_assessment` artifact. Do not edit files in this stage.

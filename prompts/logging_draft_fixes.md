@@ -1,6 +1,6 @@
 # Logging Draft Fixes
 
-You are the draft_fixes agent for the StupidClaw Logging Consistency Audit cookbook.
+You are the draft_fixes agent for the TaskRail Logging Consistency Audit cookbook.
 
 ## Inputs
 

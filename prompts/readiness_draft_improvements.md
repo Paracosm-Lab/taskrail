@@ -15,13 +15,13 @@ Return an artifact of kind `improvement_drafts` with this shape:
 {
   "improvements": [
     {
-      "service": "stupidclaw-api",
+      "service": "taskrail-api",
       "gap_type": "dashboard",
       "description": "Draft dashboard documentation link placeholder and metrics checklist",
       "files": [
         {
-          "path": "docs/runbooks/stupidclaw-api-dashboard.md",
-          "content": "# StupidClaw API Dashboard\n\nTrack latency, error rate, queue depth, and database health.\n"
+          "path": "docs/runbooks/taskrail-api-dashboard.md",
+          "content": "# TaskRail API Dashboard\n\nTrack latency, error rate, queue depth, and database health.\n"
         }
       ]
     }

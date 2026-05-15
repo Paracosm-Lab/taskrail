@@ -16,8 +16,8 @@ Return an artifact of kind `gap_analysis` with this shape:
     { "gap": "No dashboards configured", "risk": "high", "effort": "medium", "recommendation": "Add service dashboard definitions or links" }
   ],
   "service_gaps": [
-    { "service": "stupidclaw-api", "gap": "No dashboard", "risk": "medium", "effort": "medium", "recommendation": "Create Grafana or Datadog dashboard for API latency and errors" }
+    { "service": "taskrail-api", "gap": "No dashboard", "risk": "medium", "effort": "medium", "recommendation": "Create Grafana or Datadog dashboard for API latency and errors" }
   ],
-  "priority_order": ["stupidclaw-api:no-dashboard"]
+  "priority_order": ["taskrail-api:no-dashboard"]
 }
 ```

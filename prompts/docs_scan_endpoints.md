@@ -1,6 +1,6 @@
 # API Docs Scan Endpoints
 
-You are the endpoint inventory stage for StupidClaw's API Documentation Sync queue.
+You are the endpoint inventory stage for TaskRail's API Documentation Sync queue.
 
 Inputs:
 - Repository root path supplied by the work item.

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_05_000400) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_15_000200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -38,7 +38,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_05_000400) do
     t.datetime "updated_at", null: false
     t.datetime "last_heartbeat_at"
     t.string "heartbeat_message"
+    t.jsonb "metadata", default: {}, null: false
+    t.index ["status"], name: "index_claims_on_status"
     t.index ["work_item_id"], name: "index_claims_on_work_item_id"
+    t.check_constraint "status >= 0 AND status <= 3", name: "claims_status_check"
   end
 
   create_table "pipes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -104,6 +107,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_05_000400) do
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["trace_id", "sequence"], name: "index_trace_events_on_trace_id_and_sequence"
     t.index ["trace_id"], name: "index_trace_events_on_trace_id"
   end
 
@@ -153,7 +157,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_05_000400) do
     t.uuid "pipe_id"
     t.index ["parent_id"], name: "index_work_items_on_parent_id"
     t.index ["pipe_id"], name: "index_work_items_on_pipe_id"
+    t.index ["status"], name: "index_work_items_on_status"
     t.index ["work_queue_id"], name: "index_work_items_on_work_queue_id"
+    t.check_constraint "status >= 0 AND status <= 5", name: "work_items_status_check"
   end
 
   create_table "work_queues", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -163,6 +169,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_05_000400) do
     t.jsonb "config", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "category"
     t.index ["slug"], name: "index_work_queues_on_slug", unique: true
   end
 

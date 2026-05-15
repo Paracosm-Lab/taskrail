@@ -2,7 +2,7 @@
 
 ## Problem
 
-StupidClaw queues run in isolation. A security scan produces findings. A remediation queue could act on those findings. Today the only connection between them is `spawn_work_items` — an agent-decided, ad-hoc mechanism buried in report bodies. You can't look at the system and see how queues connect. You can't declare "when security scan finishes, feed the results into remediation." The network topology is invisible until runtime.
+TaskRail queues run in isolation. A security scan produces findings. A remediation queue could act on those findings. Today the only connection between them is `spawn_work_items` — an agent-decided, ad-hoc mechanism buried in report bodies. You can't look at the system and see how queues connect. You can't declare "when security scan finishes, feed the results into remediation." The network topology is invisible until runtime.
 
 ## Solution
 

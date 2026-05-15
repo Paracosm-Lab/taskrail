@@ -1,0 +1,29 @@
+<%
+  stages = queue.stages
+  current_index = stages.index(work_item.stage_name) || 0
+  status_pill = {
+    "pending"   => "bg-blue text-base",
+    "claimed"   => "bg-peach text-base",
+    "blocked"   => "bg-red text-base",
+    "waiting"   => "bg-mauve text-base",
+    "completed" => "bg-green text-base",
+    "cancelled" => "bg-surface1 text-overlay0"
+  }.fetch(work_item.status, "bg-surface1 text-overlay0")
+%>
+
+<div class="bg-mantle rounded p-3">
+  <div class="flex items-center gap-1 overflow-x-auto text-xs">
+    <% stages.each_with_index do |stage, i| %>
+      <% if i < current_index %>
+        <span class="px-3 py-1.5 bg-green text-base rounded font-medium flex-shrink-0"><%= stage %> ✓</span>
+      <% elsif i == current_index %>
+        <span class="px-3 py-1.5 <%= status_pill %> rounded font-bold flex-shrink-0"><%= stage %> →</span>
+      <% else %>
+        <span class="px-3 py-1.5 bg-surface0 text-overlay0 rounded flex-shrink-0"><%= stage %></span>
+      <% end %>
+      <% unless i == stages.length - 1 %>
+        <span class="text-overlay0 flex-shrink-0">›</span>
+      <% end %>
+    <% end %>
+  </div>
+</div>

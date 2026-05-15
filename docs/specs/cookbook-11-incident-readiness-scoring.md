@@ -4,7 +4,7 @@
 
 You have eight services. Some have health checks, alerting, runbooks, dashboards, and on-call coverage. Some have none of the above. You don't know which ones because nobody's audited it. When service X breaks at 3am, you find out the hard way that it has no runbook, no dashboard, and the last person who understood it left the company.
 
-StupidClaw audits every service against a readiness rubric, scores them, ranks by risk, and drafts the missing pieces for the worst ones. The output is a readiness scorecard — a single view of "if this breaks tonight, are we ready?"
+TaskRail audits every service against a readiness rubric, scores them, ranks by risk, and drafts the missing pieces for the worst ones. The output is a readiness scorecard — a single view of "if this breaks tonight, are we ready?"
 
 ## Queue: `incident_readiness`
 
@@ -160,14 +160,14 @@ stage_configs:
 
 ### E2E Test Fixtures
 
-Use StupidClaw's own codebase as the target. It has:
+Use TaskRail's own codebase as the target. It has:
 - A Rails API (web service) with some health check infrastructure
 - Docker Compose for staging
 - Runbooks (from the ops queue E2E test)
 - Sentry fixtures but maybe no DSN config
 - Some structured logging, some not
 
-This makes a realistic test — the readiness scorer will find real gaps in StupidClaw itself.
+This makes a realistic test — the readiness scorer will find real gaps in TaskRail itself.
 
 ### Recurring Use
 
@@ -184,7 +184,7 @@ Service             Health  Alert  Runbook  Dash  Log  Error  Resil  Docs  GRADE
 crm-service           2      1      0       1     1     1      0      1     D (29%)
 notification-service  1      1      0       0     0     1      0      0     F (13%)
 billing-service       2      1      0       0     1     0      0      1     D (21%)
-stupidclaw-api        3      2      1       0     2     2      1      2     B (65%)
+taskrail-api        3      2      1       0     2     2      1      2     B (65%)
 
 Platform gaps: No service has runbooks. No dashboards configured. No circuit breakers.
 Worst service: notification-service (F, 13%)

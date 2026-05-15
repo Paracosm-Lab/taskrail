@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe Engine::Runner do
-  it "claims exactly one pending work item" do
+  it "claims all currently claimable pending work items" do
     queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[intake decompose done])
     StageConfig.create!(work_queue: queue, stage_name: "intake", adapter_type: "fake", completion_criteria: ["report_present"])
     first = WorkItem.create!(work_queue: queue, title: "First", spec_url: "opaque spec", stage_name: "intake", status: :pending)
@@ -11,7 +11,7 @@ RSpec.describe Engine::Runner do
 
     expect(processed).to eq(first)
     expect(first.reload.claims.count).to eq(1)
-    expect(second.reload.claims.count).to eq(0)
+    expect(second.reload.claims.count).to eq(1)
   end
 
   it "skips work items with active claims" do
@@ -78,5 +78,58 @@ RSpec.describe Engine::Runner do
     claim = work_item.claims.last
     expect(claim).to be_active
     expect(claim.async_execution).to eq(true)
+  end
+
+  it "does not create duplicate active claims when two ticks race for the same item" do
+    queue = WorkQueue.create!(name: "Async", slug: "async-#{SecureRandom.hex(4)}", stages: %w[build done])
+    StageConfig.create!(work_queue: queue, stage_name: "build", adapter_type: "async_fake", completion_criteria: ["branch_created"])
+    work_item = WorkItem.create!(work_queue: queue, title: "Async build", spec_url: "opaque spec", stage_name: "build", status: :pending)
+
+    adapter_class = Class.new do
+      def execute(_assignment)
+        Engine::AsyncAdapterResult.new(provider: "codex", external_id: SecureRandom.uuid, status: "submitted", metadata: {}, trace_events: [])
+      end
+    end
+    stub_const("Engine::ClaimExecutor::ADAPTERS", Engine::ClaimExecutor::ADAPTERS.merge("async_fake" => adapter_class))
+
+    errors = Queue.new
+    threads = 2.times.map do
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          described_class.new.call
+        rescue StandardError => e
+          errors << e
+        end
+      end
+    end
+    threads.each(&:join)
+
+    expect(errors.size).to eq(0)
+    expect(work_item.reload.claims.active.count).to eq(1)
+    expect(work_item.claims.count).to eq(1)
+  end
+
+  it "marks a failed claim and continues processing other pending work" do
+    queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[ok boom done])
+    StageConfig.create!(work_queue: queue, stage_name: "ok", adapter_type: "fake", completion_criteria: ["report_present"])
+    StageConfig.create!(work_queue: queue, stage_name: "boom", adapter_type: "raising_fake", completion_criteria: ["report_present"])
+    first = WorkItem.create!(work_queue: queue, title: "First", spec_url: "opaque spec", stage_name: "ok", status: :pending)
+    second = WorkItem.create!(work_queue: queue, title: "Second", spec_url: "opaque spec", stage_name: "boom", status: :pending)
+    third = WorkItem.create!(work_queue: queue, title: "Third", spec_url: "opaque spec", stage_name: "ok", status: :pending)
+
+    adapter_class = Class.new do
+      def execute(_assignment)
+        raise "adapter unavailable"
+      end
+    end
+    stub_const("Engine::ClaimExecutor::ADAPTERS", Engine::ClaimExecutor::ADAPTERS.merge("raising_fake" => adapter_class))
+
+    described_class.new.call
+
+    expect(first.reload.claims.completed.count).to eq(1)
+    failed_claim = second.reload.claims.last
+    expect(failed_claim).to be_failed
+    expect(failed_claim.metadata).to include("error" => "adapter unavailable")
+    expect(third.reload.claims.completed.count).to eq(1)
   end
 end

@@ -1,6 +1,6 @@
 # Development Decompose
 
-You are the decomposition agent for the StupidClaw feature development queue.
+You are the decomposition agent for the TaskRail feature development queue.
 
 Break the accepted spec into small, ordered child work items. Each child must have:
 

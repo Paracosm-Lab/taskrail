@@ -25,7 +25,7 @@ RSpec.describe Engine::AsyncClaimChecker do
       duration_ms: 10,
       metadata: {
         "report" => { "summary" => "Build complete" },
-        "artifacts" => [{ "kind" => "branch", "data" => { "name" => "stupidclaw/build-1" } }]
+        "artifacts" => [{ "kind" => "branch", "data" => { "name" => "taskrail/build-1" } }]
       }
     )
     allow(CodexCliPoller).to receive(:new).and_return(instance_double(CodexCliPoller, call: poll_result))
@@ -36,7 +36,7 @@ RSpec.describe Engine::AsyncClaimChecker do
     expect(claim.async_execution).to eq(false)
     expect(claim.completed_at).to be_present
     expect(claim.reports.last.body["summary"]).to eq("Build complete")
-    expect(claim.artifacts.find_by!(kind: "branch").data["name"]).to eq("stupidclaw/build-1")
+    expect(claim.artifacts.find_by!(kind: "branch").data["name"]).to eq("taskrail/build-1")
     expect(claim.trace.trace_events.pluck(:event_type)).to include("codex_complete")
     expect(claim.work_item.reload.stage_name).to eq("test")
     expect(claim.work_item.transition_logs.last.trigger).to eq("rule_satisfied")

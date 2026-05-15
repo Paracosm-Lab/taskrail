@@ -21,7 +21,7 @@ function parseArgs(argv: string[]): Options {
     else if (arg === '--queue') options.queue = requireValue(argv, ++index, '--queue');
     else if (arg === '--refresh') options.refreshSeconds = Number(requireValue(argv, ++index, '--refresh'));
     else if (arg === '--help' || arg === '-h') {
-      console.log('Usage: stupidclaw-tui [--api URL] [--queue SLUG] [--refresh SECONDS]');
+      console.log('Usage: taskrail-tui [--api URL] [--queue SLUG] [--refresh SECONDS]');
       process.exit(0);
     } else {
       throw new Error(`unknown option: ${arg}`);

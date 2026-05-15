@@ -1,0 +1,67 @@
+<div class="max-w-lg">
+  <h1 class="text-xl font-bold text-mauve mb-4">New Work Item</h1>
+
+  <%= form_with url: work_items_path, method: :post, class: "flex flex-col gap-4" do |f| %>
+    <div>
+      <label class="block text-xs text-overlay0 mb-1">Queue</label>
+      <select name="work_item[queue_slug]"
+              class="w-full bg-surface0 rounded px-3 py-2 text-sm text-text border border-surface1 focus:border-blue outline-none">
+        <% @queues.each do |q| %>
+          <option value="<%= q.slug %>" <%= "selected" if @queue&.slug == q.slug %>><%= q.slug %></option>
+        <% end %>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-xs text-overlay0 mb-1">Title <span class="text-red">*</span></label>
+      <input type="text" name="work_item[title]" required
+             class="w-full bg-surface0 rounded px-3 py-2 text-sm text-text border border-surface1 focus:border-blue outline-none"
+             placeholder="Describe the work item">
+    </div>
+
+    <div>
+      <label class="block text-xs text-overlay0 mb-1">Spec URL <span class="text-red">*</span></label>
+      <input type="text" name="work_item[spec_url]" required
+             class="w-full bg-surface0 rounded px-3 py-2 text-sm text-text border border-surface1 focus:border-blue outline-none"
+             placeholder="https://... or file://...">
+    </div>
+
+    <div>
+      <label class="block text-xs text-overlay0 mb-1">Tags <span class="text-overlay0">(optional)</span></label>
+      <div id="tag-rows" class="flex flex-col gap-2">
+        <div class="flex gap-2">
+          <input type="text" name="work_item[tags][][name]" placeholder="key"
+                 class="w-1/3 bg-surface0 rounded px-3 py-2 text-sm text-text border border-surface1 focus:border-blue outline-none">
+          <input type="text" name="work_item[tags][][value]" placeholder="value"
+                 class="flex-1 bg-surface0 rounded px-3 py-2 text-sm text-text border border-surface1 focus:border-blue outline-none">
+        </div>
+      </div>
+      <button type="button" onclick="addTagRow()"
+              class="mt-2 text-xs text-overlay0 hover:text-text">+ add tag</button>
+    </div>
+
+    <div class="flex gap-3">
+      <button type="submit"
+              class="px-4 py-2 bg-blue text-base rounded text-sm font-semibold hover:opacity-80">
+        Create
+      </button>
+      <% back = @queue ? queue_path(@queue.slug) : root_path %>
+      <%= link_to "Cancel", back, class: "px-4 py-2 bg-surface0 rounded text-sm text-overlay0 hover:text-text" %>
+    </div>
+  <% end %>
+</div>
+
+<script>
+  function addTagRow() {
+    const container = document.getElementById('tag-rows');
+    const row = document.createElement('div');
+    row.className = 'flex gap-2';
+    row.innerHTML = `
+      <input type="text" name="work_item[tags][][name]" placeholder="key"
+             class="w-1/3 bg-surface0 rounded px-3 py-2 text-sm text-text border border-surface1">
+      <input type="text" name="work_item[tags][][value]" placeholder="value"
+             class="flex-1 bg-surface0 rounded px-3 py-2 text-sm text-text border border-surface1">
+    `;
+    container.appendChild(row);
+  }
+</script>

@@ -3,7 +3,10 @@ module Api
     class PipesController < ApplicationController
       def index
         pipes = Pipe.includes(:from_queue, :to_queue).order(:name)
-        render json: pipes.map { |pipe| pipe_json(pipe) }
+        page_pipes, meta = paginate(pipes)
+        serialized_pipes = page_pipes.map { |pipe| pipe_json(pipe) }
+
+        render json: { data: serialized_pipes, pipes: serialized_pipes, meta: meta }
       end
 
       def show

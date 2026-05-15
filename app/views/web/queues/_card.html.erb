@@ -1,0 +1,18 @@
+<%
+  status_color = {
+    "pending"   => "border-blue text-blue",
+    "claimed"   => "border-peach text-peach",
+    "blocked"   => "border-red text-red",
+    "waiting"   => "border-mauve text-mauve",
+    "completed" => "border-green text-green",
+    "cancelled" => "border-surface1 text-overlay0"
+  }.fetch(item.status, "border-surface1 text-overlay0")
+%>
+
+<%= link_to work_item_path(item), class: "block bg-surface0 rounded p-2 border-l-2 hover:bg-surface1 transition-colors #{status_color}" do %>
+  <div class="text-text text-xs font-medium leading-snug mb-1 line-clamp-2"><%= item.title %></div>
+  <div class="flex items-center justify-between">
+    <span class="text-xs <%= status_color.split.last %>"><%= item.status %></span>
+    <span class="text-overlay0 text-xs"><%= time_ago_in_words(item.updated_at) %></span>
+  </div>
+<% end %>

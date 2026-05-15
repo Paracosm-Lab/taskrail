@@ -1,26 +1,38 @@
 # API Documentation Sync Cookbook
 
-Source spec: ../specs/cookbook-03-api-documentation-sync.md
-Queue slug: api_docs_sync
+The `api_docs_sync` cookbook scans API endpoints, compares implementation behavior against existing documentation, drafts updates, validates examples, and stops for human review.
 
-## What it does
+## Problem Statement
 
-Scans a target app for routes/controllers/serializers, compares the endpoint inventory to existing OpenAPI/Markdown docs, drafts missing or stale docs, validates examples, and blocks for human review.
+API docs drift because endpoint changes, serializer behavior, authentication requirements, and examples often change separately from documentation.
+
+Taskrail turns documentation sync into a repeatable queue with reviewable artifacts.
 
 ## Stages
 
+```text
 scan_endpoints -> diff_existing_docs -> draft_documentation -> validate_examples -> human_review -> done
+```
 
 ## Inputs
 
-- Repository path or checkout context from the work item.
-- Framework type when known.
-- Existing docs path(s) when known.
+- API routes or OpenAPI files.
+- Controller or handler source.
+- Existing docs.
+- Example requests and responses.
+- Authentication conventions.
 
-## Infrastructure
+## Artifacts
 
-This cookbook intentionally does not define shared Docker Compose services. The validation stage is shell-script based and should run inside whatever worker container the shared cookbook infrastructure provides. Optional OpenAPI validators such as `npx @redocly/cli lint` can be added later by the shared infrastructure plan.
+- `endpoint_inventory`: discovered routes, methods, parameters, response shapes, and auth requirements.
+- `documentation_diff`: stale, missing, or conflicting docs.
+- `drafted_docs`: proposed documentation updates.
+- `validation_results`: example request/response validation output.
 
-## Portability
+## Human Gate
 
-Queue YAML uses `file://prompts/...` prompt references resolved from `Rails.root` by `db/seeds.rb`. Do not add absolute repo paths.
+Humans review generated docs before publishing. The queue should not silently overwrite public docs.
+
+## Configurability
+
+Teams can tune route discovery, doc targets, validation commands, output format, examples, and review gates.

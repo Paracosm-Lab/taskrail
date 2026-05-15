@@ -1,4 +1,5 @@
 name: Development Shell
+category: Development
 slug: development-shell
 stages:
   - intake

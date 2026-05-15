@@ -24,7 +24,7 @@ module Cli
     def header
       queue_name = cell(data.queue.fetch("name", data.queue_slug))
       <<~TEXT.chomp
-        StupidClaw Dashboard
+        TaskRail Dashboard
         API: #{cell(data.api_url)}
         Queue: #{queue_name} (#{cell(data.queue_slug)})
       TEXT
@@ -64,7 +64,7 @@ module Cli
       <<~TEXT.chomp
         Actions
         #{count} blocked #{noun} #{verb} a human answer.
-        Run: bin/stupidclaw answer WORK_ITEM_ID "your guidance"
+        Run: bin/taskrail answer WORK_ITEM_ID "your guidance"
       TEXT
     end
 

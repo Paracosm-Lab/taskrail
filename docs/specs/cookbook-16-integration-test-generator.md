@@ -6,7 +6,7 @@
 
 You have unit tests. They pass. Production still breaks because the pieces don't fit together — the API returns a different shape than the frontend expects, the background job assumes a record exists that the controller hasn't created yet, the webhook handler can't parse what the third-party actually sends.
 
-Unit tests verify components in isolation. Integration tests verify that the components work together. Nobody writes them because they're hard to set up, slow to run, and tedious to maintain. StupidClaw maps the critical user flows, generates the integration tests, and keeps them current.
+Unit tests verify components in isolation. Integration tests verify that the components work together. Nobody writes them because they're hard to set up, slow to run, and tedious to maintain. TaskRail maps the critical user flows, generates the integration tests, and keeps them current.
 
 ## Queue: `integration_tests`
 
@@ -145,4 +145,4 @@ stage_configs:
 
 ### E2E Test Fixture
 
-Use StupidClaw itself: the flow of "create work item → engine tick → claim created → adapter runs → report stored → predicate checked → stage advanced" is a real integration test that touches the API, the engine, the adapter, and the database.
+Use TaskRail itself: the flow of "create work item → engine tick → claim created → adapter runs → report stored → predicate checked → stage advanced" is a real integration test that touches the API, the engine, the adapter, and the database.

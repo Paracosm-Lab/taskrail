@@ -11,6 +11,7 @@ module Adapters
       return missing_commands_result if commands.empty?
 
       working_directory = config.fetch("working_directory", DEFAULT_WORKING_DIRECTORY)
+      validate_working_directory!(working_directory) if config.key?("working_directory")
       command_results = commands.map do |command_config|
         run_command(command_config, working_directory, assignment)
       end
@@ -20,6 +21,14 @@ module Adapters
     end
 
     private
+
+    def validate_working_directory!(dir)
+      root = File.realpath(ENV.fetch("TASKRAIL_WORKSPACE_ROOT", "/tmp/taskrail-workspaces"))
+      resolved = File.realpath(dir)
+      return if resolved == root || resolved.start_with?("#{root}/")
+
+      raise SecurityError, "working_directory #{dir} escapes sandbox root #{root}"
+    end
 
     def run_command(command_config, working_directory, assignment)
       command_result = ShellCommandRunner.new(
@@ -117,7 +126,7 @@ module Adapters
     def trace_event(result)
       {
         "event_type" => "shell_command",
-        "input_summary" => "#{result.fetch('name')}: #{result.fetch('command')}",
+        "input_summary" => "#{result.fetch('name')}: #{TraceRedactor.safe_summary(result.fetch('command'))}",
         "output_summary" => summarize_output(result),
         "duration_ms" => result.fetch("duration_ms"),
         "tokens_in" => 0,

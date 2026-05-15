@@ -13,4 +13,4 @@ Prioritize fixes by risk:
 6. Preserve correlation IDs and tenant/customer context.
 7. Add metrics when a local pattern exists.
 
-Return only JSON that StupidClaw can parse with a `job_patches` artifact. Do not deploy or mutate production data.
+Return only JSON that TaskRail can parse with a `job_patches` artifact. Do not deploy or mutate production data.

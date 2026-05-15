@@ -1,4 +1,5 @@
 name: Migration Safety Check
+category: Data
 slug: migration_safety
 stages:
   - scan_impact

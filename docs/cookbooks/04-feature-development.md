@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Demonstrates the original StupidClaw MVP development queue: cheap intake, frontier decomposition, async Codex implementation, shell validation, frontier review, and terminal completion.
+Demonstrates the original Taskrail MVP development queue: cheap intake, frontier decomposition, async Codex implementation, shell validation, frontier review, and terminal completion.
 
 ## Queue
 
@@ -19,12 +19,12 @@ Use `test/fixtures/apps/feature_development` as the sample repository slice. The
 ## Run
 
 ```bash
-stupidclaw submit --queue development-codex --spec test/fixtures/apps/feature_development/README.md --title "Add iCalendar VEVENT export"
-stupidclaw status SC-104 --traces
-stupidclaw list --queue development-codex --stage build
-stupidclaw answer SC-104 "Use UTC timestamps in basic iCalendar format"
-stupidclaw retry SC-104
-stupidclaw costs --work-item SC-104
+taskrail submit --queue development-codex --spec test/fixtures/apps/feature_development/README.md --title "Add iCalendar VEVENT export"
+taskrail status SC-104 --traces
+taskrail list --queue development-codex --stage build
+taskrail answer SC-104 "Use UTC timestamps in basic iCalendar format"
+taskrail retry SC-104
+taskrail costs --work-item SC-104
 ```
 
 ## Expected Engine Loop
@@ -43,4 +43,4 @@ stupidclaw costs --work-item SC-104
 - No stage may deploy or merge.
 - Test stage may not edit files.
 - Queue config and prompts are repo-relative.
-- Blocking questions are answered through `stupidclaw answer`.
+- Blocking questions are answered through `taskrail answer`.

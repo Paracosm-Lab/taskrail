@@ -7,12 +7,12 @@ class ClaudeAssignmentPrompt
 
   def to_s
     <<~PROMPT
-      You are executing one StupidClaw workflow stage.
+      You are executing one TaskRail workflow stage.
 
       Important boundary:
       - Do not decide the workflow transition.
       - Produce the best report/evidence for the assigned stage.
-      - StupidClaw will persist your report and apply queue-owned transition rules.
+      - TaskRail will persist your report and apply queue-owned transition rules.
 
       Stage: #{stage.fetch("name")}
       Work item: #{JSON.pretty_generate(work_item)}

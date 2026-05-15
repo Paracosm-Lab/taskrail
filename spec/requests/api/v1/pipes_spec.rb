@@ -5,7 +5,7 @@ RSpec.describe "GET /api/v1/pipes", type: :request do
     WorkQueue.create!(name: slug, slug: "#{slug}-#{SecureRandom.hex(4)}", stages: stages)
   end
 
-  it "returns all pipes" do
+  it "returns paginated pipes" do
     src = make_queue("src", ["scan", "done"])
     dst = make_queue("dst", ["intake", "done"])
     Pipe.create!(name: "My Pipe", slug: "my-pipe-#{SecureRandom.hex(4)}", from_queue: src, from_stage: "scan", to_queue: dst)
@@ -14,8 +14,9 @@ RSpec.describe "GET /api/v1/pipes", type: :request do
 
     expect(response).to have_http_status(:ok)
     body = JSON.parse(response.body)
-    expect(body).to be_an(Array)
-    expect(body.any? { |p| p["name"] == "My Pipe" }).to be true
+    expect(body.fetch("data").any? { |p| p["name"] == "My Pipe" }).to be true
+    expect(body.fetch("pipes")).to eq(body.fetch("data"))
+    expect(body.fetch("meta")).to include("total", "limit" => 50, "offset" => 0)
   end
 
   it "returns a single pipe by slug" do

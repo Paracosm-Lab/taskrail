@@ -13,8 +13,10 @@ module Api
         tag_filters.each do |key, value|
           items = items.where("work_items.tags ->> ? = ?", key, value)
         end
+        page_items, meta = paginate(items)
+        serialized_items = page_items.map { |work_item| serialize(work_item) }
 
-        render json: { work_items: items.map { |work_item| serialize(work_item) } }
+        render json: { data: serialized_items, work_items: serialized_items, meta: meta }
       end
 
       def show
@@ -23,13 +25,25 @@ module Api
 
       def create
         queue = WorkQueue.find_by!(slug: params.require(:queue))
+        stage_name = params[:stage_name].presence || queue.stages.first
+        unless queue.stage_configs.exists?(stage_name: stage_name)
+          return render json: { error: "Stage '#{stage_name}' does not exist in queue '#{queue.slug}'" }, status: :unprocessable_entity
+        end
+
+        spec_url = params.require(:spec_url)
+        return render(json: { error: "spec_url is too long (max 2 KB)" }, status: :unprocessable_entity) if spec_url.to_s.bytesize > 2.kilobytes
+
+        tags = sanitize_tags(params.fetch(:tags, {}))
+        tag_error = validate_tags(tags)
+        return render(json: { error: tag_error }, status: :unprocessable_entity) if tag_error
+
         item = WorkItem.create!(
           work_queue: queue,
           title: params.require(:title),
-          spec_url: params.require(:spec_url),
-          stage_name: queue.stages.first,
+          spec_url: spec_url,
+          stage_name: stage_name,
           status: :pending,
-          tags: params.fetch(:tags, {}).to_unsafe_h
+          tags: tags
         )
 
         render json: serialize(item), status: :created
@@ -37,7 +51,10 @@ module Api
 
       def answer
         item = work_item
-        metadata = item.metadata.merge("human_answer" => params.require(:answer))
+        answer = params.require(:answer).to_s
+        return render(json: { error: "answer is too long (max 64 KB)" }, status: :unprocessable_entity) if answer.bytesize > 64.kilobytes
+
+        metadata = item.metadata.merge("human_answer" => answer)
         metadata.delete("blocked_reason")
         metadata.delete("escalation")
         item.update!(status: :pending, metadata: metadata)
@@ -71,7 +88,24 @@ module Api
       def tag_filters
         return {} unless params[:tags].present?
 
-        params[:tags].respond_to?(:to_unsafe_h) ? params[:tags].to_unsafe_h : params[:tags].to_h
+        sanitize_tags(params[:tags])
+      end
+
+      def sanitize_tags(raw_tags)
+        return {} unless raw_tags.is_a?(ActionController::Parameters) || raw_tags.is_a?(Hash)
+
+        raw_tags.each_pair.each_with_object({}) do |(key, value), tags|
+          next unless key.is_a?(String) || key.is_a?(Symbol)
+
+          tags[key.to_s] = value.to_s
+        end
+      end
+
+      def validate_tags(tags)
+        oversized_key = tags.find { |_key, value| value.bytesize > 256 }&.first
+        return "tag value for '#{oversized_key}' is too long (max 256 characters)" if oversized_key
+
+        nil
       end
 
       def serialize(item, include_traces: false)
@@ -156,30 +190,18 @@ module Api
       end
 
       def safe_trace_metadata(value)
-        case value
-        when Hash
-          value.each_with_object({}) do |(key, child), sanitized|
-            sanitized[key] = sensitive_trace_key?(key) ? "[REDACTED]" : safe_trace_metadata(child)
-          end
-        when Array
-          value.map { |child| safe_trace_metadata(child) }
-        when String
-          safe_trace_summary(value)
-        else
-          value
-        end
+        TraceRedactor.safe_metadata(value)
       end
 
       def safe_trace_summary(value, redact_always: false)
-        return value unless value.is_a?(String)
-        return "[REDACTED]" if redact_always && value.present?
-        return "[REDACTED]" if value.match?(/(?:api[_-]?key|apikey|secret|password|passwd|token|bearer|authorization|credential)(?:\s|[:=]|$)/i)
+        redacted = TraceRedactor.safe_summary(value, redact_always:)
+        return "[REDACTED]" if value.is_a?(String) && redacted != value
 
-        value
+        redacted
       end
 
       def sensitive_trace_key?(key)
-        key.to_s.match?(/(?:prompt|assignment|api[_-]?key|apikey|secret|password|passwd|token|authorization|credential)/i)
+        TraceRedactor.sensitive_key?(key)
       end
     end
   end

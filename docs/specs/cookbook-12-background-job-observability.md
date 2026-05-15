@@ -4,7 +4,7 @@
 
 Your Sidekiq/GoodJob/SQS queues process thousands of jobs a day. You know about failures when a customer complains — "my export never arrived," "my invoice wasn't sent," "my sync didn't run." The jobs themselves have no instrumentation, no structured logging, no timeout config, and no dead letter strategy. Some retry forever. Some fail silently. Some have been stuck in the retry set for weeks.
 
-StupidClaw scans every job class, checks for instrumentation, scores observability, and drafts the missing pieces. Same pattern as the Sentry alert cookbook, but for your async work.
+TaskRail scans every job class, checks for instrumentation, scores observability, and drafts the missing pieces. Same pattern as the Sentry alert cookbook, but for your async work.
 
 ## Queue: `job_observability`
 

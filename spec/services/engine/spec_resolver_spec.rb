@@ -36,6 +36,6 @@ RSpec.describe Engine::SpecResolver do
   end
 
   it "passes opaque spec URLs through unchanged" do
-    expect(described_class.new("obsidian://note/stupidclaw").resolve).to eq("obsidian://note/stupidclaw")
+    expect(described_class.new("obsidian://note/taskrail").resolve).to eq("obsidian://note/taskrail")
   end
 end

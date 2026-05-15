@@ -192,7 +192,7 @@ export function App({ apiUrl, queue, refreshSeconds }: AppProps) {
         <Text dimColor>Waiting for API; retrying every {Math.max(1, refreshSeconds)}s. Press q to quit.</Text>
       </Box>;
     }
-    return <Text color="green">Loading StupidClaw TUI…</Text>;
+    return <Text color="green">Loading TaskRail TUI…</Text>;
   }
 
   return <Box flexDirection="column">

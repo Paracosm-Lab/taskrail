@@ -4,7 +4,7 @@
 
 N+1 queries, missing indexes, full table scans hiding behind ActiveRecord. Performance degrades gradually until someone notices a page takes 8 seconds. The fix is always obvious in hindsight — add an `includes`, add an index, rewrite the query. But nobody audits proactively.
 
-StupidClaw analyzes your queries, identifies the worst offenders, drafts index migrations and query optimizations, tests them, and queues for review.
+TaskRail analyzes your queries, identifies the worst offenders, drafts index migrations and query optimizations, tests them, and queues for review.
 
 ## Queue: `query_health`
 

@@ -16,6 +16,7 @@ RSpec.describe "Workflow API", type: :request do
 
   it "creates, shows, and lists work items" do
     queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[intake build done])
+    StageConfig.create!(work_queue: queue, stage_name: "intake", adapter_type: "fake")
 
     post "/api/v1/work_items", params: { title: "Add calendar", spec_url: "opaque spec", queue: queue.slug, tags: { complexity: "small" } }
     expect(response).to have_http_status(:created)
@@ -32,6 +33,36 @@ RSpec.describe "Workflow API", type: :request do
     get "/api/v1/work_items", params: { queue: queue.slug, stage: "intake" }
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body.fetch("work_items").map { |item| item.fetch("id") }).to include(id)
+  end
+
+  it "rejects work item creation for stages not configured on the queue" do
+    queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[intake build done])
+    StageConfig.create!(work_queue: queue, stage_name: "intake", adapter_type: "fake")
+
+    post "/api/v1/work_items", params: { title: "Add calendar", spec_url: "opaque spec", queue: queue.slug, stage_name: "missing" }
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body.fetch("error")).to include("Stage 'missing' does not exist")
+  end
+
+  it "sanitizes work item tags to flat string key/value pairs" do
+    queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[intake done])
+    StageConfig.create!(work_queue: queue, stage_name: "intake", adapter_type: "fake")
+
+    post "/api/v1/work_items",
+      params: {
+        title: "Tagged",
+        spec_url: "opaque spec",
+        queue: queue.slug,
+        tags: { env: "prod", team: "platform", nested: { bad: "data" } }
+      }
+
+    expect(response).to have_http_status(:created)
+    expect(WorkItem.find(response.parsed_body.fetch("id")).tags).to include(
+      "env" => "prod",
+      "team" => "platform",
+      "nested" => { "bad" => "data" }.to_s
+    )
   end
 
   it "filters work items by status and tags" do

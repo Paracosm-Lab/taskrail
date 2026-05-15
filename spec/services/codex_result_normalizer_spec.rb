@@ -11,7 +11,7 @@ RSpec.describe CodexResultNormalizer do
       duration_ms: 25,
       metadata: {
         "report" => { "summary" => "Build complete" },
-        "artifacts" => [{ "kind" => "branch", "data" => { "name" => "stupidclaw/build-1" } }]
+        "artifacts" => [{ "kind" => "branch", "data" => { "name" => "taskrail/build-1" } }]
       }
     )
 
@@ -21,7 +21,7 @@ RSpec.describe CodexResultNormalizer do
     expect(result.report["summary"]).to eq("Build complete")
     expect(result.report["stdout"]).to eq("implemented feature")
     expect(result.report["stage"]).to eq("build")
-    expect(result.artifacts.first).to eq("kind" => "branch", "data" => { "name" => "stupidclaw/build-1" })
+    expect(result.artifacts.first).to eq("kind" => "branch", "data" => { "name" => "taskrail/build-1" })
     expect(result.trace_events.first["event_type"]).to eq("codex_complete")
     expect(result.trace_events.first["duration_ms"]).to eq(25)
     expect(result.trace_events.first["metadata"]["status"]).to eq("succeeded")

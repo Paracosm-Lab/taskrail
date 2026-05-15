@@ -1,4 +1,5 @@
 name: Dependency Upgrade
+category: Development
 slug: dependency_upgrade
 stages:
   - audit_dependencies

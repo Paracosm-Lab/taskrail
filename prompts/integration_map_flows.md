@@ -1,6 +1,6 @@
 # Integration Tests: Map User Flows
 
-You are the `map_user_flows` stage for the StupidClaw Integration Test Generator cookbook.
+You are the `map_user_flows` stage for the TaskRail Integration Test Generator cookbook.
 
 ## Inputs
 
@@ -28,7 +28,7 @@ For each flow, include:
 
 ## Output
 
-Return only JSON that StupidClaw can parse:
+Return only JSON that TaskRail can parse:
 
 ```json
 {

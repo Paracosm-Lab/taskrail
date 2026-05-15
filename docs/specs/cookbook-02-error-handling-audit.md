@@ -4,7 +4,7 @@
 
 Your codebase has bare `rescue` blocks, swallowed exceptions, generic error messages, and `puts` debugging that made it to production. Every service handles errors differently. Some silently discard failures. Some retry without backoff. Some log the error but lose all context.
 
-StupidClaw scans for bad error handling patterns, classifies them by blast radius, drafts fixes with proper Sentry context and structured logging, runs the tests, and queues for review.
+TaskRail scans for bad error handling patterns, classifies them by blast radius, drafts fixes with proper Sentry context and structured logging, runs the tests, and queues for review.
 
 ## Queue: `error_handling_audit`
 

@@ -20,7 +20,7 @@ Return an artifact of kind `readiness_scores` with this shape:
 {
   "services": [
     {
-      "name": "stupidclaw-api",
+      "name": "taskrail-api",
       "scores": {
         "health_checks": 3,
         "alerting": 1,
@@ -38,8 +38,8 @@ Return an artifact of kind `readiness_scores` with this shape:
   ],
   "summary": {
     "avg_score": 50,
-    "worst_service": "stupidclaw-api",
-    "best_service": "stupidclaw-api"
+    "worst_service": "taskrail-api",
+    "best_service": "taskrail-api"
   }
 }
 ```

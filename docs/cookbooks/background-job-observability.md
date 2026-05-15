@@ -1,38 +1,34 @@
 # Background Job Observability Cookbook
 
-Source spec: `docs/specs/cookbook-12-background-job-observability.md`
+The `job_observability` cookbook audits workers and background jobs for retries, timeouts, idempotency, error capture, logging, metrics, and operational visibility.
 
-The `job_observability` queue audits async jobs and workers for missing error capture, structured logging, timeout protection, retry strategy, idempotency, context propagation, and metrics.
+## Problem Statement
+
+Background jobs often fail quietly. Retry behavior, timeouts, idempotency, logging, and metrics differ across workers, which makes incidents harder to diagnose.
+
+Taskrail turns job observability into a repeatable review queue.
 
 ## Stages
 
-1. `scan_job_classes`: catalogs job classes into a `job_inventory` artifact.
-2. `assess_observability`: scores each job and writes an `observability_assessment` artifact plus a human-readable scorecard.
-3. `draft_fixes`: drafts `job_patches` for blind and under-instrumented jobs.
-4. `run_tests`: applies or validates patches through the configured shell test command.
-5. `human_review`: blocks for review before work is considered complete.
-6. `done`: terminal state.
-
-## Fixture app
-
-The fixture app at `test/fixtures/apps/uninstrumented_jobs/` includes:
-
-- `ExportJob`: no instrumentation.
-- `BillingJob`: good instrumentation example.
-- `SyncJob`: infinite retries with no timeout or dead letter strategy.
-- `CleanupJob`: silently swallows errors.
-
-## Infrastructure expectations
-
-This cookbook assumes the shared StupidClaw development/test infrastructure is already available. It does not define new Docker Compose services. External services in the fixture app are fake Ruby classes so the cookbook can run in local and Docker-friendly test environments.
-
-## Focused tests
-
-```bash
-PATH="$HOME/.rbenv/shims:$HOME/.rbenv/bin:$PATH" bundle exec rspec \
-  spec/services/engine/predicates/job_inventory_produced_spec.rb \
-  spec/services/engine/predicates/observability_assessed_spec.rb \
-  spec/services/engine/predicate_registry_spec.rb \
-  spec/models/work_queue_seed_spec.rb \
-  spec/system/job_observability_cookbook_spec.rb
+```text
+scan_job_classes -> assess_observability -> draft_fixes -> run_tests -> human_review -> done
 ```
+
+## Artifacts
+
+- `job_inventory`: job classes, schedules, queues, retry behavior, dependencies, and owners.
+- `observability_scorecard`: logging, metrics, error handling, idempotency, and timeout assessment.
+- `fix_patches`: proposed instrumentation or behavior changes.
+- `test_results`: validation output for drafted changes.
+
+## Human Gate
+
+Humans review patches and scorecards before accepting instrumentation or retry behavior changes.
+
+## Configurability
+
+Teams can change scoring rules, job frameworks, required metrics, test commands, artifact schemas, and review policy.
+
+## Focused Tests
+
+Run focused cookbook tests after changing predicates, fixtures, or queue config.

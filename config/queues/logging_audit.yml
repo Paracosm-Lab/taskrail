@@ -1,4 +1,5 @@
 name: Logging Consistency Audit
+category: Operations
 slug: logging_audit
 stages:
   - scan_log_statements

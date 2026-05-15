@@ -13,7 +13,7 @@ Return an artifact of kind `service_inventory` with this shape:
 {
   "services": [
     {
-      "name": "stupidclaw-api",
+      "name": "taskrail-api",
       "type": "web",
       "dependencies": ["postgres", "redis"],
       "deployment": "docker-compose",

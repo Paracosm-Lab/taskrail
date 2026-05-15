@@ -1,6 +1,6 @@
 # Integration Tests: Identify Boundaries
 
-You are the `identify_boundaries` stage for the StupidClaw Integration Test Generator cookbook.
+You are the `identify_boundaries` stage for the TaskRail Integration Test Generator cookbook.
 
 ## Inputs
 
@@ -28,7 +28,7 @@ Also include setup data and teardown requirements.
 
 ## Output
 
-Return only JSON that StupidClaw can parse:
+Return only JSON that TaskRail can parse:
 
 ```json
 {

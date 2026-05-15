@@ -375,7 +375,7 @@ The response queue's `forbidden_skills` includes `read_disruption_plan` — it i
 ### E2E Test Setup
 
 Requires a Docker Compose staging environment with:
-- At least 2 services (e.g., the StupidClaw API + Postgres)
+- At least 2 services (e.g., the TaskRail API + Postgres)
 - Sentry DSN configured to capture events
 - Health check endpoints
 - A set of "safe disruption" scripts (stop a container, block a port, etc.)

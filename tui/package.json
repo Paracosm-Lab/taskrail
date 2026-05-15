@@ -1,10 +1,10 @@
 {
-  "name": "stupidclaw-tui",
+  "name": "taskrail-tui",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "bin": {
-    "stupidclaw-tui": "dist/index.js"
+    "taskrail-tui": "dist/index.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

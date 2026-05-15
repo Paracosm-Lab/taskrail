@@ -28,15 +28,26 @@
 !/tmp/storage/
 !/tmp/storage/.keep
 
-# Ignore master key for decrypting credentials and more.
+# Ignore encrypted Rails credentials and local decrypting keys.
 /config/master.key
+/config/credentials.yml.enc
+/config/credentials/*.key
+/config/credentials/*.yml.enc
 
 # TUI dependencies and build output.
 /tui/node_modules/
 /tui/dist/
 /tui/dist-test/
 
+# Legacy nested app layout generated artifacts.
+/app/log/*
+/app/tmp/*
+/app/tui/node_modules/
+/app/tui/dist/
+/app/tui/dist-test/
+
 # Local agent scratch/planning artifacts.
 /.hermes/
 /.superpowers/
+/strategy/
 .DS_Store

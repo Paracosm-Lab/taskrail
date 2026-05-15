@@ -1,4 +1,5 @@
 name: Database Query Health Check
+category: Data
 slug: query_health
 stages:
   - collect_queries

@@ -1,6 +1,6 @@
 # Integration Tests: Generate Tests
 
-You are the `generate_tests` stage for the StupidClaw Integration Test Generator cookbook.
+You are the `generate_tests` stage for the TaskRail Integration Test Generator cookbook.
 
 ## Inputs
 
@@ -23,7 +23,7 @@ Write integration test files for the mapped flows. Use the project's actual test
 
 ## Output
 
-Return only JSON that StupidClaw can parse:
+Return only JSON that TaskRail can parse:
 
 ```json
 {

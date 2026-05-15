@@ -7,14 +7,14 @@ class CodexAssignmentPrompt
 
   def to_s
     <<~PROMPT
-      You are executing one StupidClaw build/fix workflow stage with Codex.
+      You are executing one TaskRail build/fix workflow stage with Codex.
 
       Important boundaries:
       - create or modify code only for the assigned scope.
-      - produce branch and artifact evidence for StupidClaw to inspect.
+      - produce branch and artifact evidence for TaskRail to inspect.
       - do not merge, deploy, or mutate production data.
       - do not decide the workflow transition.
-      - StupidClaw will persist your evidence and apply queue-owned transition rules.
+      - TaskRail will persist your evidence and apply queue-owned transition rules.
 
       Stage: #{stage.fetch("name")}
       Work item: #{JSON.pretty_generate(work_item)}

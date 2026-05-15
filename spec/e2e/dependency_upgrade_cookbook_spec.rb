@@ -1,7 +1,7 @@
 require "rails_helper"
 require "json"
 
-RSpec.describe "dependency upgrade cookbook" do
+RSpec.describe "dependency upgrade cookbook", type: :request do
   let(:fixture_root) { Rails.root.join("cookbooks/fixtures/apps/dependency_upgrade") }
 
   it "ships a deterministic fixture app and audit script" do
@@ -59,6 +59,35 @@ RSpec.describe "dependency upgrade cookbook" do
       }
     )
     expect(Engine::PredicateRegistry.resolve("upgrade_drafted").new(claim: upgrade_claim).call).to be_passed
+  end
+
+  it "drives a work item through all stages using the fake adapter" do
+    queue = WorkQueue.create!(
+      name: "Dependency Upgrade Fake Fixture #{SecureRandom.hex(4)}",
+      slug: "dependency-upgrade-fake-fixture-#{SecureRandom.hex(4)}",
+      stages: %w[audit_dependencies prioritize_upgrades upgrade_one run_tests human_review done],
+      config: { "default_max_retries" => 0, "max_regression_loops" => 0 }
+    )
+    queue.stage_configs.create!(stage_name: "audit_dependencies", adapter_type: "fake", completion_criteria: ["audit_produced"])
+    queue.stage_configs.create!(stage_name: "prioritize_upgrades", adapter_type: "fake", completion_criteria: ["upgrade_plan_produced"])
+    queue.stage_configs.create!(stage_name: "upgrade_one", adapter_type: "fake", completion_criteria: ["upgrade_drafted"])
+    queue.stage_configs.create!(stage_name: "run_tests", adapter_type: "fake", completion_criteria: ["tests_passed"])
+    queue.stage_configs.create!(stage_name: "human_review", adapter_type: "fake", completion_criteria: ["report_present"])
+    queue.stage_configs.create!(stage_name: "done", adapter_type: "fake", completion_criteria: ["report_present"])
+
+    post "/api/v1/work_items", params: { queue: queue.slug, title: "Upgrade stale dependencies", spec_url: "docs/specs/cookbook-dependency-upgrade.md" }
+    expect(response).to have_http_status(:created)
+    work_item = WorkItem.find(JSON.parse(response.body).fetch("id"))
+    expect(work_item).to be_pending
+
+    15.times do
+      Engine::Runner.new.call
+      break if work_item.reload.completed?
+    end
+
+    expect(work_item).to be_completed
+    expect(work_item.stage_name).to eq("done")
+    expect(work_item.artifacts.pluck(:kind)).to include("dependency_audit", "upgrade_plan", "upgrade_patches", "test_results")
   end
 
   it "keeps dependency upgrade queue paths portable" do

@@ -1,4 +1,4 @@
-# StupidClaw E2E Test Report
+# Taskrail E2E Test Report
 
 **Date:** 2026-05-05
 **Pipeline:** Operations Queue
@@ -8,7 +8,7 @@
 
 ## What This Is
 
-This is a test. We built four fake Sentry alerts that simulate a realistic multi-service incident, fed them into StupidClaw's operations pipeline, and watched what happened. The alerts are canned JSON fixtures, the services don't exist, and nobody was paged.
+This is a test. We built four fake Sentry alerts that simulate a realistic multi-service incident, fed them into Taskrail's operations pipeline, and watched what happened. The alerts are canned JSON fixtures, the services don't exist, and nobody was paged.
 
 The point was to prove that the pipeline works end-to-end: can it ingest raw alerts, reason about them, identify what's wrong with the observability itself, draft operational runbooks, and stop at the right gate for human approval — all without anyone touching it?
 
@@ -16,7 +16,7 @@ It can. And along the way, the test runs found two real bugs in the engine that 
 
 ### Why You'd Do This
 
-StupidClaw is meant to run autonomously on real Sentry webhooks. Before you point it at production, you need to know:
+Taskrail is meant to run autonomously on real Sentry webhooks. Before you point it at production, you need to know:
 
 - Does the pipeline actually advance through all stages?
 - Do the predicates catch bad work or let garbage through?
@@ -397,7 +397,7 @@ Each stage is config in `operations.yml` — model, timeout, predicates, retry l
 
 ### Dual-Layer Completion
 
-When an agent finishes, StupidClaw doesn't trust it. Two layers:
+When an agent finishes, Taskrail doesn't trust it. Two layers:
 
 1. **Agent self-report:** "I produced clusters." (report + artifacts)
 2. **Predicate verification:** "Prove it." (engine checks the artifact independently)
@@ -467,6 +467,6 @@ The ops pipeline works. The recursive loop is proven in concept — thin alerts 
 - **Close the loop end-to-end** — let the dev queue pick up the spawned work items, implement the instrumentation fixes, open PRs, and verify the next round of alerts score higher
 - **Retro TUI** — Ink/React terminal dashboard. Navigate queues, watch stages advance, approve human review gates from the terminal
 - **Heartbeats** — long-running adapters report liveness every 30s. Staleness detection flags stuck claims without killing them
-- **Digest** — `bin/stupidclaw digest --since 2h` for time-window activity summaries
+- **Digest** — `bin/taskrail digest --since 2h` for time-window activity summaries
 - **Test Harness** — `bin/generate-sentry-alerts` to fire canned payloads at the Sentry Store API for repeatable E2E runs
-- **Real Sentry webhook** — point a Sentry project at StupidClaw and let it process actual production alerts
+- **Real Sentry webhook** — point a Sentry project at Taskrail and let it process actual production alerts

@@ -6,7 +6,7 @@
 
 An incident happened. The Slack thread is 200 messages long. The Sentry project has 47 events from a 90-minute window. Someone wrote a hasty postmortem at 2am that says "database was slow" and lists "add more monitoring" as the action item. Three months later, the same thing happens again because nobody actually understood what went wrong or updated the runbooks.
 
-StupidClaw ingests the actual incident artifacts — Sentry events, Slack threads, deploy logs, metrics — reconstructs a timeline, identifies root cause vs. symptoms, evaluates whether existing runbooks would have caught it faster, and drafts updates to the runbooks and alerting so the next incident is shorter.
+TaskRail ingests the actual incident artifacts — Sentry events, Slack threads, deploy logs, metrics — reconstructs a timeline, identifies root cause vs. symptoms, evaluates whether existing runbooks would have caught it faster, and drafts updates to the runbooks and alerting so the next incident is shorter.
 
 ## Queue: `post_incident_replay`
 
@@ -193,4 +193,4 @@ Run after every P1/P2 incident. The output replaces the hasty 2am postmortem wit
 
 ### E2E Test Fixture
 
-Use the StupidClaw ops pipeline E2E test as the incident. The fixture includes Sentry-format events, simulated Slack messages, and deploy timestamps. The replay pipeline should reconstruct what happened and identify improvements to the ops pipeline's own alerting.
+Use the TaskRail ops pipeline E2E test as the incident. The fixture includes Sentry-format events, simulated Slack messages, and deploy timestamps. The replay pipeline should reconstruct what happened and identify improvements to the ops pipeline's own alerting.

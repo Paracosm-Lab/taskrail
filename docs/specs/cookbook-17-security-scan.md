@@ -6,7 +6,7 @@
 
 You've been shipping fast. Nobody's done a security review since launch. There are probably SQL injection vulnerabilities in the old code, a few endpoints missing auth checks, and at least one hardcoded API key that someone committed eight months ago and forgot about. You know you need a security audit but it's expensive, slow, and you keep putting it off.
 
-StupidClaw scans your codebase for the OWASP top 10, hardcoded secrets, auth bypass patterns, and unsafe data handling. It categorizes by severity, drafts fixes for the worst ones, and tests them. Not a replacement for a professional pentest, but it catches the low-hanging fruit that accounts for most real-world breaches.
+TaskRail scans your codebase for the OWASP top 10, hardcoded secrets, auth bypass patterns, and unsafe data handling. It categorizes by severity, drafts fixes for the worst ones, and tests them. Not a replacement for a professional pentest, but it catches the low-hanging fruit that accounts for most real-world breaches.
 
 ## Queue: `security_scan`
 

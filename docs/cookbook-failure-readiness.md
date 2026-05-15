@@ -10,7 +10,7 @@ Every team has the same experience. Production breaks. An on-call engineer gets 
 
 The fixes are obvious in hindsight: better Sentry context, up-to-date runbooks, tested mitigation steps. But nobody does it proactively because it's tedious, it's not urgent, and there's always a feature to ship.
 
-StupidClaw automates the tedious part.
+Taskrail automates the tedious part.
 
 ## The Workflow
 
@@ -42,7 +42,7 @@ This isn't reactive incident response. This is a drill you run on a Tuesday afte
 
 ### Step 1: Find the Exception Paths
 
-Pick a service. Look at where it can fail. You don't need StupidClaw for this step — a code review, a `grep` for `rescue`, or a static analysis tool will do.
+Pick a service. Look at where it can fail. You don't need Taskrail for this step — a code review, a `grep` for `rescue`, or a static analysis tool will do.
 
 For a Rails CRM service talking to Postgres, the obvious paths are:
 

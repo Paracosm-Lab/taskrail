@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BASE_URL="${BASE_URL:-http://localhost:3000}"
+DURATION="${DURATION:-30}"
+TARGET_RPS="${TARGET_RPS:-10}"
+
+echo "load-test placeholder"
+echo "BASE_URL=${BASE_URL} DURATION=${DURATION}s TARGET_RPS=${TARGET_RPS}"
+echo "implement with hey/k6 and fail on SLO threshold violations"

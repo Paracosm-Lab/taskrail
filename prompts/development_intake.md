@@ -1,6 +1,6 @@
 # Development Intake
 
-You are the cheap intake agent for the StupidClaw feature development queue.
+You are the cheap intake agent for the TaskRail feature development queue.
 
 Read the work item spec and return a structured report that:
 

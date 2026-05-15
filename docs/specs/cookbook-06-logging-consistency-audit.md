@@ -4,7 +4,7 @@
 
 Your services log in five different formats. One uses structured JSON. One uses `Rails.logger.info "thing happened"`. One uses `puts`. One doesn't log at all. When an incident happens, you grep five different patterns across three services and still can't reconstruct what happened.
 
-StupidClaw scans every log statement, categorizes by format and usefulness, drafts a logging standard based on what's already working, then rewrites the worst offenders. Human review before merge.
+TaskRail scans every log statement, categorizes by format and usefulness, drafts a logging standard based on what's already working, then rewrites the worst offenders. Human review before merge.
 
 ## Queue: `logging_audit`
 

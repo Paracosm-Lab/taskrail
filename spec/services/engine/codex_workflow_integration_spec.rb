@@ -47,7 +47,7 @@ RSpec.describe "codex async workflow", type: :model do
       duration_ms: 17,
       metadata: {
         "report" => { "summary" => "Build complete" },
-        "artifacts" => [{ "kind" => "branch", "data" => { "name" => "stupidclaw/build-smoke" } }]
+        "artifacts" => [{ "kind" => "branch", "data" => { "name" => "taskrail/build-smoke" } }]
       }
     )
     allow(CodexCliPoller).to receive(:new).and_return(instance_double(CodexCliPoller, call: poll_result))
@@ -59,7 +59,7 @@ RSpec.describe "codex async workflow", type: :model do
     expect(claim.completed_at).to be_present
     expect(work_item.reload.stage_name).to eq("test")
     expect(work_item).to be_pending
-    expect(work_item.artifacts.find_by!(kind: "branch").data["name"]).to eq("stupidclaw/build-smoke")
+    expect(work_item.artifacts.find_by!(kind: "branch").data["name"]).to eq("taskrail/build-smoke")
     expect(claim.trace.trace_events.pluck(:event_type)).to include("codex_complete")
 
     transition = work_item.transition_logs.order(:created_at).last

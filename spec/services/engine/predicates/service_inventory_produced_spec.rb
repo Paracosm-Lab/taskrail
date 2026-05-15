@@ -8,7 +8,7 @@ RSpec.describe Engine::Predicates::ServiceInventoryProduced do
   it "passes with evidence when a service inventory artifact has at least one service" do
     artifact = claim.artifacts.create!(work_item: work_item,
       kind: "service_inventory",
-      data: { "services" => [{ "name" => "stupidclaw-api", "type" => "web" }] }
+      data: { "services" => [{ "name" => "taskrail-api", "type" => "web" }] }
     )
 
     result = described_class.new(claim: claim).call

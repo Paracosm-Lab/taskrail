@@ -1,4 +1,5 @@
 name: Dead Code Removal
+category: Development
 slug: dead_code_removal
 stages:
   - scan_references

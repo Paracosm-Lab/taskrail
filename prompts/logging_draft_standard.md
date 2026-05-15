@@ -1,6 +1,6 @@
 # Logging Draft Standard
 
-You are the draft_standard agent for the StupidClaw Logging Consistency Audit cookbook.
+You are the draft_standard agent for the TaskRail Logging Consistency Audit cookbook.
 
 ## Inputs
 

@@ -53,7 +53,7 @@ RSpec.describe "integration test generator cookbook", type: :request do
 
     post "/api/v1/work_items", params: {
       queue: queue.slug,
-      title: "Generate integration specs for StupidClaw itself",
+      title: "Generate integration specs for TaskRail itself",
       spec_url: "docs/specs/cookbook-16-integration-test-generator.md",
       tags: { cookbook: "integration_tests" }
     }

@@ -1,0 +1,89 @@
+<%
+  status_color = {
+    "pending"   => "text-blue",
+    "claimed"   => "text-peach",
+    "blocked"   => "text-red",
+    "waiting"   => "text-mauve",
+    "completed" => "text-green",
+    "cancelled" => "text-overlay0"
+  }.fetch(@work_item.status, "text-overlay0")
+%>
+
+<!-- Breadcrumb -->
+<div class="flex items-center gap-2 text-sm text-overlay0 mb-3">
+  <%= link_to @queue.slug, queue_path(@queue.slug), class: "hover:text-text" %>
+  <span>/</span>
+  <span class="text-text truncate max-w-xl"><%= @work_item.title %></span>
+  <span class="ml-auto text-xs">
+    <%= link_to "↻ Refresh", work_item_path(@work_item), class: "hover:text-text" %>
+  </span>
+</div>
+
+<!-- Header -->
+<div class="bg-mantle rounded p-4 mb-3 flex items-start gap-4">
+  <div class="flex-1 min-w-0">
+    <h1 class="text-lg font-bold text-text mb-1 break-words"><%= @work_item.title %></h1>
+    <div class="flex items-center gap-3 text-xs flex-wrap">
+      <span class="<%= status_color %> font-semibold">● <%= @work_item.status %></span>
+      <span class="text-overlay0">stage: <span class="text-blue"><%= @work_item.stage_name %></span></span>
+      <span class="text-overlay0">created <%= time_ago_in_words(@work_item.created_at) %> ago</span>
+      <% if @work_item.pipe_id %>
+        <span class="text-overlay0">via <span class="text-sapphire"><%= @work_item.pipe.slug %></span></span>
+      <% end %>
+    </div>
+  </div>
+  <div class="flex gap-2 flex-shrink-0 text-xs">
+    <% if %w[blocked waiting].include?(@work_item.status) %>
+      <%= button_to "↩ retry", retry_work_item_path(@work_item),
+            method: :post,
+            class: "px-3 py-1 bg-surface0 rounded text-red hover:bg-surface1 cursor-pointer" %>
+    <% end %>
+    <% unless %w[completed cancelled].include?(@work_item.status) %>
+      <%= button_to "✕ cancel", cancel_work_item_path(@work_item),
+            method: :post,
+            class: "px-3 py-1 bg-surface0 rounded text-overlay0 hover:bg-surface1 cursor-pointer" %>
+    <% end %>
+  </div>
+</div>
+
+<!-- Pipeline bar -->
+<%= render "pipeline", work_item: @work_item, queue: @queue %>
+
+<!-- Tabs -->
+<div data-controller="tabs" class="bg-mantle rounded mt-3">
+  <!-- Tab bar -->
+  <div class="flex border-b border-surface0 px-4">
+    <% tabs = [
+      ["artifacts", "Artifacts (#{@artifacts.count})"],
+      ["claims",    "Claims (#{@claims.count})"],
+      ["log",       "Transition Log"],
+      ["children",  "Children (#{@children.count})"]
+    ] %>
+    <% tabs.each_with_index do |(key, label), i| %>
+      <button
+        data-tabs-target="tab"
+        data-action="click->tabs#switch"
+        data-tab="<%= key %>"
+        class="px-4 py-3 text-sm border-b-2 -mb-px transition-colors
+               <%= i == 0 ? 'border-blue text-blue' : 'border-transparent text-overlay0 hover:text-text' %>">
+        <%= label %>
+      </button>
+    <% end %>
+  </div>
+
+  <!-- Tab panels -->
+  <div class="p-4">
+    <div data-tabs-target="panel" data-tab="artifacts">
+      <%= render "artifacts", artifacts: @artifacts, claims: @claims %>
+    </div>
+    <div data-tabs-target="panel" data-tab="claims" class="hidden">
+      <%= render "claims", claims: @claims %>
+    </div>
+    <div data-tabs-target="panel" data-tab="log" class="hidden">
+      <%= render "transition_log", logs: @transition_logs %>
+    </div>
+    <div data-tabs-target="panel" data-tab="children" class="hidden">
+      <%= render "children", children: @children %>
+    </div>
+  </div>
+</div>
