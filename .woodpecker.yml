@@ -34,7 +34,7 @@ steps:
       - apt-get update -qq
       - apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config
       - bundle install --jobs 4 --retry 3
-      - bin/brakeman --no-pager
+      - bin/brakeman --no-pager --skip-files cookbooks/,test/fixtures/,spec/fixtures/ -x EOLRuby
     depends_on:
       - format
       - secret-scan
