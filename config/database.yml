@@ -1,0 +1,37 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  host: <%= ENV.fetch("POSTGRES_HOST", "localhost") %>
+  username: <%= ENV.fetch("POSTGRES_USER", "taskrail") %>
+  password: <%= ENV.fetch("POSTGRES_PASSWORD", "taskrail") %>
+  port: <%= ENV.fetch("POSTGRES_PORT", 5435) %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5) %>
+
+development:
+  <<: *default
+  database: taskrail_development
+
+test:
+  <<: *default
+  database: taskrail_test
+
+production:
+  primary: &primary_production
+    <<: *default
+    host: <%= ENV.fetch("POSTGRES_HOST", "localhost") %>
+    port: <%= ENV.fetch("POSTGRES_PORT", 5432) %>
+    database: <%= ENV.fetch("POSTGRES_DB", "taskrail_production") %>
+    username: <%= ENV.fetch("POSTGRES_USER", "taskrail") %>
+    password: <%= ENV["TASKRAIL_DATABASE_PASSWORD"] %>
+  cache:
+    <<: *primary_production
+    database: taskrail_production_cache
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *primary_production
+    database: taskrail_production_queue
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *primary_production
+    database: taskrail_production_cable
+    migrations_paths: db/cable_migrate

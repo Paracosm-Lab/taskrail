@@ -28,8 +28,11 @@
 !/tmp/storage/
 !/tmp/storage/.keep
 
-# Ignore master key for decrypting credentials and more.
+# Ignore encrypted Rails credentials and local decrypting keys.
 /config/master.key
+/config/credentials.yml.enc
+/config/credentials/*.key
+/config/credentials/*.yml.enc
 
 # TUI dependencies and build output.
 /tui/node_modules/

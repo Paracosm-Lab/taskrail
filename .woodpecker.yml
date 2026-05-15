@@ -21,18 +21,16 @@ steps:
     when:
       event: [push, pull_request]
 
-  type_check:
-    image: ruby:3.2.0
+  secret-scan:
+    image: zricethezav/gitleaks:latest
     commands:
-      - apt-get update -qq
-      - apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config
-      - bundle install --jobs 4 --retry 3
-      - bundle exec ruby -e 'puts "type-check: ruby service has no sorbet/steep yet (non-blocking placeholder)."'
+      - gitleaks detect --source . --verbose --no-banner
     depends_on:
-      - format
+      - lint
     when:
       event: [push, pull_request]
 
+  # Type checking: not yet configured. Add Sorbet or Steep when warranted.
   security_scan:
     image: ruby:3.2.0
     commands:
@@ -41,7 +39,8 @@ steps:
       - bundle install --jobs 4 --retry 3
       - bin/brakeman --no-pager
     depends_on:
-      - type_check
+      - format
+      - secret-scan
     when:
       event: [push, pull_request]
 
@@ -80,6 +79,38 @@ steps:
       - test_tui
     when:
       event: [push, pull_request]
+
+  sbom:
+    image: anchore/syft:latest
+    commands:
+      - syft dir:. -o cyclonedx-json > sbom.json
+    depends_on:
+      - test
+    failure: ignore
+    when:
+      event: [push, pull_request]
+
+  sbom_upload:
+    image: alpine:3.20
+    environment:
+      NAS_SSH_KEY:
+        from_secret: nas_ssh_key
+      NAS_HOST: 192.168.10.22
+      NAS_USER: admin
+      NAS_ARTIFACT_ROOT: /share/Public/taskrail/sbom
+    commands:
+      - apk add --no-cache openssh-client
+      - mkdir -p ~/.ssh
+      - printf "%s" "$NAS_SSH_KEY" > ~/.ssh/nas_ed25519
+      - chmod 600 ~/.ssh/nas_ed25519
+      - ssh-keyscan -H "$NAS_HOST" >> ~/.ssh/known_hosts
+      - ssh -i ~/.ssh/nas_ed25519 "$NAS_USER@$NAS_HOST" "mkdir -p '$NAS_ARTIFACT_ROOT/$CI_COMMIT_SHA'"
+      - scp -i ~/.ssh/nas_ed25519 sbom.json "$NAS_USER@$NAS_HOST:$NAS_ARTIFACT_ROOT/$CI_COMMIT_SHA/sbom.json"
+    depends_on:
+      - sbom
+    failure: ignore
+    when:
+      event: [push, manual]
 
   docker_build_pr:
     image: woodpeckerci/plugin-docker-buildx
