@@ -116,6 +116,39 @@ RSpec.describe Engine::ClaimExecutor do
     expect(claim.assignment.dig("async", "external_id")).to eq("codex-run-1")
   end
 
+  it "redacts prompt in the stored assignment after an async submission" do
+    queue = WorkQueue.create!(name: "Codex Queue", slug: "codex-queue-#{SecureRandom.hex(4)}", stages: %w[build test])
+    stage_config = StageConfig.create!(
+      work_queue: queue,
+      stage_name: "build",
+      adapter_type: "codex",
+      adapter_config: {
+        "command" => "codex",
+        "args" => ["exec", "--json"],
+        "working_directory" => Rails.root.to_s,
+        "output_artifact_kind" => "branch"
+      },
+      completion_criteria: ["branch_created"],
+      agent_prompt: "secret-token: xyz123"
+    )
+    work_item = WorkItem.create!(work_queue: queue, title: "Codex async redaction", spec_url: "opaque", stage_name: "build")
+    claim = Claim.create!(work_item: work_item, agent_type: "codex", status: :active)
+
+    submitter_result = CodexCliSubmitter::Result.new(
+      stdout: '{"id":"codex-run-2","branch":"taskrail/build-2"}',
+      stderr: "",
+      exit_status: 0,
+      duration_ms: 10,
+      external_id: "codex-run-2",
+      metadata: { "id" => "codex-run-2", "branch" => "taskrail/build-2" }
+    )
+    allow(CodexCliSubmitter).to receive(:new).and_return(instance_double(CodexCliSubmitter, call: submitter_result))
+
+    described_class.new(claim: claim, stage_config: stage_config).call
+
+    expect(claim.reload.assignment["prompt"]).to eq("[REDACTED]")
+  end
+
   it "leaves claims active when an adapter starts async execution" do
     queue = WorkQueue.create!(name: "Async", slug: "async-#{SecureRandom.hex(4)}", stages: %w[build test])
     stage_config = StageConfig.create!(work_queue: queue, stage_name: "build", adapter_type: "async_fake")
