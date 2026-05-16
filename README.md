@@ -146,6 +146,12 @@ cd tui && npm install && npm run build
 bundle exec rspec
 ```
 
+Automated release test plan:
+
+```bash
+open docs/test-plan.md
+```
+
 End-to-end fake workflow integration test:
 
 ```bash
