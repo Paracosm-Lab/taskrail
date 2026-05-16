@@ -12,7 +12,7 @@ module Engine
 
     def process_claim(claim)
       # Re-check after acquiring the lock: another worker may have completed this claim
-      # between the outer find_each query and this point.
+      # between the in_batches pluck and the FOR UPDATE SKIP LOCKED re-query.
       return unless claim.active? && claim.async_execution?
 
       if claim.heartbeat_stale?
@@ -42,6 +42,8 @@ module Engine
       Engine::ClaimResultPersister.new(claim: claim, stage_config: stage_config).call(result)
       claim.update!(status: :completed, async_execution: false, completed_at: Time.current)
       Engine::TransitionManager.new(work_item: claim.work_item, claim: claim, stage_config: stage_config).call
+    rescue StandardError => e
+      Rails.logger.error("AsyncClaimChecker failed for Claim##{claim.id}: #{e.class}: #{e.message}")
     end
   end
 end
