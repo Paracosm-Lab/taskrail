@@ -8,7 +8,7 @@ Latest local E2E sweep: 2026-05-15 local time.
 
 | Layer | Command or flow | Latest result |
 | --- | --- | --- |
-| Cookbook E2E suite | `bundle exec rspec spec/e2e` | Passed: `31 examples, 0 failures` |
+| Cookbook E2E suite | `bundle exec rspec spec/e2e` | Passed: `32 examples, 0 failures` |
 | Full Ruby suite | `bundle exec rspec` | Passed: `655 examples, 0 failures` |
 | TUI suite | `cd tui && npm test` | Passed: `7 tests, 0 failures` |
 | Brakeman | `bin/brakeman --no-pager --skip-files cookbooks/,test/fixtures/,spec/fixtures/ -x EOLRuby` | Passed: no warnings |
@@ -51,6 +51,7 @@ These runs exercise real local services and CLIs beyond unit/request specs.
 | Full feature-development workflow | Disposable workspace `/tmp/taskrail-workspaces/feature-development-full`, real Codex edit/build, shell validation, Claude review | Work item `7bbd368c-6204-4f4b-a046-31c9927c9038` reached `done/completed`; fixture spec passed with `1 example, 0 failures`. |
 | Verified branch-artifact feature workflow | Disposable workspace `/tmp/taskrail-workspaces/feature-development-verified-2`, real Codex edit/build with normal workspace Git writes, shell validation, Claude review | Work item `b7bf066d-f443-40a8-b6b3-7aff2c7c8ce7` reached `done/completed`; `branch_created` verified branch `taskrail/b7bf066d-calendar-export-2` at commit `397fc786b1e36d16760b2a83eccc532938076813` in the workspace Git repository. |
 | Production image smoke | `docker build -t taskrail:e2e-local .`, isolated Postgres container, app container in `RAILS_ENV=production` | Image built, `/health` returned 200, unauthenticated API returned 401, PAT-backed API worked, `bin/smoke-prod` passed, and a container-created `development` work item reached `done/completed`. |
+| Web/API/engine user journey | `bundle exec rspec spec/e2e/web_user_journey_spec.rb` | Passed. Covers real Devise session login, web PAT creation, PAT-authenticated API work item creation, engine advancement through the fake adapter, and web UI verification of the completed item. |
 
 ## CI Evidence
 
