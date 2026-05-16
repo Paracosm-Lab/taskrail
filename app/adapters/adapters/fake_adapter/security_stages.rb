@@ -11,30 +11,6 @@ module Adapters
         )
       end
 
-      def coverage_check_result(_assignment)
-        AgentResult.success(
-          report: { "summary" => "checked PR coverage" },
-          artifacts: [
-            {
-              "kind" => "coverage_report",
-              "data" => {
-                "overall_delta" => 0.0,
-                "changed_files" => [],
-                "new_files_without_tests" => []
-              }
-            }
-          ],
-          trace_events: [trace_event("checked PR coverage")]
-        )
-      end
-
-      def architectural_review_result(_assignment)
-        AgentResult.success(
-          report: { "summary" => "approved PR architecture", "verdict" => "approved" },
-          trace_events: [trace_event("approved PR architecture")]
-        )
-      end
-
       def scan_vulnerabilities_result(_assignment)
         AgentResult.success(
           report: { "summary" => "scanned vulnerabilities" },
