@@ -8,7 +8,7 @@ Latest local E2E sweep: 2026-05-15 local time.
 
 | Layer | Command or flow | Latest result |
 | --- | --- | --- |
-| Cookbook E2E suite | `bundle exec rspec spec/e2e` | Passed: `56 examples, 0 failures` |
+| Cookbook E2E suite | `bundle exec rspec spec/e2e` | Passed: `58 examples, 0 failures` |
 | Full Ruby suite | `bundle exec rspec` | Passed: `655 examples, 0 failures` |
 | TUI suite | `cd tui && npm test` | Passed: `7 tests, 0 failures` |
 | Brakeman | `bin/brakeman --no-pager --skip-files cookbooks/,test/fixtures/,spec/fixtures/ -x EOLRuby` | Passed: no warnings |
