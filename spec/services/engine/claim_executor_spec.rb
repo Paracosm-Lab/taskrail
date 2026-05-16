@@ -146,6 +146,37 @@ RSpec.describe Engine::ClaimExecutor do
     expect(claim.assignment.dig("async", "external_id")).to eq("run-123")
   end
 
+  it "redacts sensitive keys in the stored assignment while the adapter receives the original" do
+    queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[build test])
+    stage_config = StageConfig.create!(
+      work_queue: queue,
+      stage_name: "build",
+      adapter_type: "fake",
+      completion_criteria: ["branch_created"],
+      timeout_seconds: 600,
+      agent_prompt: "Use token: sk-secret123"
+    )
+    work_item = WorkItem.create!(work_queue: queue, title: "Build thing", spec_url: "opaque spec", stage_name: "build")
+    claim = Claim.create!(work_item: work_item, agent_type: "fake", status: :active)
+
+    received_assignment = nil
+    real_adapter = Adapters::FakeAdapter.new
+    fake_adapter = instance_double(Adapters::FakeAdapter)
+    allow(fake_adapter).to receive(:execute) do |assignment|
+      received_assignment = assignment
+      real_adapter.execute(assignment)
+    end
+    allow(Adapters::FakeAdapter).to receive(:new).and_return(fake_adapter)
+
+    described_class.new(claim: claim, stage_config: stage_config).call
+
+    # Stored assignment has sensitive `prompt` key redacted
+    expect(claim.reload.assignment["prompt"]).to eq("[REDACTED]")
+
+    # Adapter received the original unsanitized assignment
+    expect(received_assignment[:prompt]).to eq("Use token: sk-secret123")
+  end
+
   it "marks a claim failed when the adapter raises" do
     queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[build test])
     stage_config = StageConfig.create!(work_queue: queue, stage_name: "build", adapter_type: "missing")
