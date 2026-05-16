@@ -55,32 +55,6 @@ RSpec.describe Engine::TransitionManager do
       }.to raise_error(Engine::TransitionManager::InvalidSpawnDefinition, /nonexistent-queue-slug/)
     end
 
-    it "wraps the error as InvalidSpawnDefinition, not ActiveRecord::RecordNotFound" do
-      queue = WorkQueue.create!(name: "Source Queue", slug: "source-queue-#{SecureRandom.hex(4)}", stages: %w[build done])
-      stage_config = StageConfig.create!(work_queue: queue, stage_name: "build", completion_criteria: ["report_present"])
-      work_item = WorkItem.create!(work_queue: queue, title: "Spawn thing", spec_url: "opaque spec", stage_name: "build", status: :claimed)
-      claim = Claim.create!(work_item: work_item, agent_type: "fake", status: :completed)
-      Report.create!(
-        claim: claim,
-        work_item: work_item,
-        stage_name: "build",
-        status: :success,
-        body: {
-          "spawn_work_items" => [
-            { "queue_slug" => "nonexistent-queue-slug", "title" => "Spawned item" }
-          ]
-        }
-      )
-
-      raised_class = nil
-      begin
-        described_class.new(work_item: work_item, claim: claim, stage_config: stage_config).call
-      rescue => e
-        raised_class = e.class
-      end
-
-      expect(raised_class).to eq(Engine::TransitionManager::InvalidSpawnDefinition)
-    end
   end
 
   describe "decompose — Gap 2: malformed children validation" do
