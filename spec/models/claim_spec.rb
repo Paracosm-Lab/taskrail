@@ -26,6 +26,24 @@ RSpec.describe Claim, type: :model do
       expect(new_claim(status: :active, async_execution: true, last_heartbeat_at: nil).heartbeat_stale?).to eq(false)
       expect(new_claim(status: :completed, async_execution: true, last_heartbeat_at: 10.minutes.ago).heartbeat_stale?).to eq(false)
     end
+
+    it "uses queue-level heartbeat_stale_seconds when configured" do
+      work_queue = instance_double(WorkQueue, config: { "heartbeat_stale_seconds" => 60 })
+      work_item = instance_double(WorkItem, work_queue: work_queue)
+      claim = new_claim(status: :active, async_execution: true, last_heartbeat_at: 61.seconds.ago)
+      allow(claim).to receive(:work_item).and_return(work_item)
+
+      expect(claim.heartbeat_stale?).to eq(true)
+    end
+
+    it "is false when heartbeat is within queue-level heartbeat_stale_seconds threshold" do
+      work_queue = instance_double(WorkQueue, config: { "heartbeat_stale_seconds" => 60 })
+      work_item = instance_double(WorkItem, work_queue: work_queue)
+      claim = new_claim(status: :active, async_execution: true, last_heartbeat_at: 59.seconds.ago)
+      allow(claim).to receive(:work_item).and_return(work_item)
+
+      expect(claim.heartbeat_stale?).to eq(false)
+    end
   end
 
   def new_claim(attributes)

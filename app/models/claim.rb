@@ -12,6 +12,12 @@ class Claim < ApplicationRecord
   validates :agent_type, presence: true
 
   def heartbeat_stale?
-    active? && async_execution? && last_heartbeat_at.present? && last_heartbeat_at < HEARTBEAT_STALE_AFTER.ago
+    active? && async_execution? && last_heartbeat_at.present? && last_heartbeat_at < stale_threshold.ago
+  end
+
+  private
+
+  def stale_threshold
+    work_item&.work_queue&.config&.dig("heartbeat_stale_seconds")&.seconds || HEARTBEAT_STALE_AFTER
   end
 end
