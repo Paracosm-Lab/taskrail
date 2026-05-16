@@ -72,7 +72,7 @@ RSpec.describe "API hardening", type: :request do
     expect(response).to have_http_status(:payload_too_large)
   end
 
-  it "rate limits API requests by bearer token" do
+  it "rate limits API requests by bearer token digest" do
     WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[intake done])
     headers = { "Authorization" => "Bearer service-token" }
 
@@ -84,6 +84,22 @@ RSpec.describe "API hardening", type: :request do
     get "/api/v1/queues", headers: headers
     expect(response).to have_http_status(:too_many_requests)
     expect(response.headers["Retry-After"]).to be_present
+  end
+
+  it "rate limits unauthenticated API requests by IP" do
+    original = ENV["TASKRAIL_SERVICE_TOKEN"]
+    ENV["TASKRAIL_SERVICE_TOKEN"] = "service-token"
+
+    60.times do
+      get "/api/v1/queues"
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    get "/api/v1/queues"
+    expect(response).to have_http_status(:too_many_requests)
+    expect(response.headers["Retry-After"]).to be_present
+  ensure
+    ENV["TASKRAIL_SERVICE_TOKEN"] = original
   end
 
   it "rate limits admin requests by bearer token" do

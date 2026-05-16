@@ -1,0 +1,62 @@
+<div class="max-w-4xl">
+  <div class="flex items-center justify-between mb-5">
+    <h1 class="text-xl font-bold text-text">Personal access tokens</h1>
+  </div>
+
+  <% if flash[:created_token].present? %>
+    <div class="mb-4 rounded bg-surface0 border border-green px-3 py-2 text-sm">
+      <div class="text-green font-semibold mb-1">New token</div>
+      <code class="break-all text-text"><%= flash[:created_token] %></code>
+    </div>
+  <% end %>
+
+  <div class="mb-6 rounded bg-mantle border border-surface0 p-4">
+    <%= form_with url: personal_access_tokens_path, scope: :personal_access_token, method: :post, class: "space-y-4" do |form| %>
+      <div>
+        <%= form.label :name, class: "block text-xs uppercase text-overlay0 mb-1" %>
+        <%= form.text_field :name, class: "w-full rounded bg-base border border-surface0 px-3 py-2 text-sm" %>
+      </div>
+      <div class="flex flex-wrap gap-4 text-sm">
+        <% PersonalAccessToken::SCOPES.each do |scope| %>
+          <% next if scope == "admin" && !current_user.admin? %>
+          <label class="inline-flex items-center gap-2">
+            <%= check_box_tag "personal_access_token[scopes][]", scope, scope == "read", class: "accent-blue" %>
+            <span><%= scope %></span>
+          </label>
+        <% end %>
+      </div>
+      <%= form.submit "Create token", class: "rounded bg-blue px-3 py-2 text-base text-sm font-semibold" %>
+    <% end %>
+  </div>
+
+  <div class="overflow-hidden rounded border border-surface0">
+    <table class="w-full text-sm">
+      <thead class="bg-mantle text-overlay0">
+        <tr>
+          <th class="px-3 py-2 text-left">Name</th>
+          <th class="px-3 py-2 text-left">Prefix</th>
+          <th class="px-3 py-2 text-left">Scopes</th>
+          <th class="px-3 py-2 text-left">Last used</th>
+          <th class="px-3 py-2 text-left">Status</th>
+          <th class="px-3 py-2"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @personal_access_tokens.each do |token| %>
+          <tr class="border-t border-surface0">
+            <td class="px-3 py-2"><%= token.name %></td>
+            <td class="px-3 py-2"><code><%= token.token_prefix %></code></td>
+            <td class="px-3 py-2"><%= token.scopes.join(", ") %></td>
+            <td class="px-3 py-2"><%= token.last_used_at&.iso8601 || "never" %></td>
+            <td class="px-3 py-2"><%= token.active? ? "active" : "inactive" %></td>
+            <td class="px-3 py-2 text-right">
+              <% if token.active? %>
+                <%= button_to "Revoke", personal_access_token_path(token), method: :delete, class: "text-red" %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

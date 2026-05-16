@@ -1,3 +1,5 @@
+require "digest"
+
 Rack::Attack.cache.store = ActiveSupport::Cache::MemoryStore.new
 
 Rack::Attack.throttled_responder = lambda do |request|
@@ -11,14 +13,37 @@ Rack::Attack.throttled_responder = lambda do |request|
   ]
 end
 
-Rack::Attack.throttle("api/token", limit: 300, period: 60.seconds) do |request|
-  request.env["HTTP_AUTHORIZATION"]&.split(" ")&.last if request.path.start_with?("/api/")
+api_limit = ENV.fetch("TASKRAIL_API_RATE_LIMIT", 300).to_i
+admin_limit = ENV.fetch("TASKRAIL_ADMIN_RATE_LIMIT", 30).to_i
+unauthenticated_limit = ENV.fetch("TASKRAIL_UNAUTHENTICATED_RATE_LIMIT", 60).to_i
+webhook_limit = ENV.fetch("TASKRAIL_WEBHOOK_RATE_LIMIT", 60).to_i
+sign_in_limit = ENV.fetch("TASKRAIL_SIGN_IN_RATE_LIMIT", 10).to_i
+
+Rack::Attack.throttle("api/bearer", limit: api_limit, period: 60.seconds) do |request|
+  bearer_digest(request) if request.path.start_with?("/api/") && bearer_digest(request)
 end
 
-Rack::Attack.throttle("admin/token", limit: 30, period: 60.seconds) do |request|
-  request.env["HTTP_AUTHORIZATION"]&.split(" ")&.last if request.path.start_with?("/admin/")
+Rack::Attack.throttle("api/unauthenticated-ip", limit: unauthenticated_limit, period: 60.seconds) do |request|
+  request.ip if request.path.start_with?("/api/") && bearer_digest(request).blank?
 end
 
-Rack::Attack.throttle("webhook/ip", limit: 60, period: 60.seconds) do |request|
+Rack::Attack.throttle("admin/bearer", limit: admin_limit, period: 60.seconds) do |request|
+  bearer_digest(request) if request.path.start_with?("/admin/") && bearer_digest(request)
+end
+
+Rack::Attack.throttle("admin/unauthenticated-ip", limit: unauthenticated_limit, period: 60.seconds) do |request|
+  request.ip if request.path.start_with?("/admin/") && bearer_digest(request).blank?
+end
+
+Rack::Attack.throttle("webhook/ip", limit: webhook_limit, period: 60.seconds) do |request|
   request.ip if request.path.include?("/webhooks/")
+end
+
+Rack::Attack.throttle("devise/sign-in-ip", limit: sign_in_limit, period: 60.seconds) do |request|
+  request.ip if request.post? && request.path == "/users/sign_in"
+end
+
+def bearer_digest(request)
+  raw_token = request.env["HTTP_AUTHORIZATION"].to_s[/\ABearer (.+)\z/, 1]
+  Digest::SHA256.hexdigest(raw_token) if raw_token.present?
 end

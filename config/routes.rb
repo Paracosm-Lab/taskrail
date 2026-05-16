@@ -1,4 +1,6 @@
 Rails.application.routes.draw do
+  devise_for :users
+  resources :personal_access_tokens, only: [:index, :create, :destroy]
   get "health", to: "health#show"
 
   namespace :admin do

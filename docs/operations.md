@@ -149,7 +149,9 @@ npm test
 
 ## Security and Secrets
 
-GitHub PR webhook verification uses `GITHUB_WEBHOOK_SECRET` when set.
+GitHub PR webhook verification requires `GITHUB_WEBHOOK_SECRET` and fails closed when it is missing.
+
+API callers should use personal access tokens. The legacy `TASKRAIL_SERVICE_TOKEN` and `TASKRAIL_ADMIN_TOKEN` paths remain available for automation during migration.
 
 Trace serialization redacts sensitive-looking prompt, token, authorization, secret, password, credential, and API key fields.
 

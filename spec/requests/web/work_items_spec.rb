@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Web::WorkItems", type: :request do
+  before { sign_in create(:user) }
+
   let!(:queue) do
     WorkQueue.create!(
       name: "Security Scan", slug: "security_scan",
