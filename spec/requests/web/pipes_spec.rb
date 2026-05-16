@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Web::Pipes", type: :request do
+  before { sign_in create(:user) }
+
   describe "GET /pipes" do
     it "returns 200" do
       get "/pipes"

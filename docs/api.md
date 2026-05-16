@@ -195,13 +195,13 @@ Supported actions:
 - `synchronize`
 - `ready_for_review`
 
-If `GITHUB_WEBHOOK_SECRET` is set, the controller verifies `X-Hub-Signature-256`.
+`GITHUB_WEBHOOK_SECRET` is required. The controller verifies `X-Hub-Signature-256` and returns `503` if the secret is not configured.
 
 Accepted pull request events create a `pr_review` work item with repository, PR number, branch, base branch, and head SHA tags.
 
 ## Admin Settings
 
-Admin endpoints are under `/admin` and require admin authentication.
+Admin endpoints are under `/admin` and require admin authentication through an admin-scoped personal access token or the legacy `TASKRAIL_ADMIN_TOKEN`.
 
 - `PUT /admin/log-level`
 - `PUT /admin/trace-sample-rate`

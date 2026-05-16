@@ -1,4 +1,6 @@
 class ApplicationController < ActionController::API
+  include Devise::Controllers::Helpers
+
   rescue_from ActionDispatch::Http::Parameters::ParseError, with: :bad_request
 
   before_action :enforce_maintenance_mode!
@@ -43,19 +45,27 @@ class ApplicationController < ActionController::API
   def require_api_auth!
     return if public_endpoint?
     return if admin_endpoint?
-    return unless auth_enforced?
+    return if valid_personal_access_token?(required_scope: api_scope)
     return if valid_service_token?
+    return unless auth_enforced?
 
     render json: { error: "unauthorized", detail: "missing or invalid bearer token" }, status: :unauthorized
   end
 
   def require_admin_auth!
+    return if authenticated_user&.admin?
+    return if valid_personal_access_token?(required_scope: "admin", require_admin_user: true)
+
     admin_token = ENV["TASKRAIL_ADMIN_TOKEN"].to_s
-    return render(json: { error: "admin_not_configured" }, status: :service_unavailable) if admin_token.empty?
+    return render(json: { error: "admin_not_configured" }, status: :service_unavailable) if admin_token.empty? && !auth_enforced?
 
     return if bearer_token == admin_token
 
     render json: { error: "forbidden", detail: "admin token required" }, status: :forbidden
+  end
+
+  def authenticated_user
+    current_user || request.env["warden"]&.user(:user)
   end
 
   def enforce_maintenance_mode!
@@ -78,8 +88,23 @@ class ApplicationController < ActionController::API
     false
   end
 
+  def valid_personal_access_token?(required_scope:, require_admin_user: false)
+    token = PersonalAccessToken.authenticate(bearer_token)
+    return false unless token&.includes_scope?(required_scope)
+    return false if require_admin_user && !token.user.admin?
+
+    token.mark_used!
+    @current_personal_access_token = token
+    @current_api_user = token.user
+    true
+  end
+
   def auth_enforced?
-    ENV["TASKRAIL_SERVICE_TOKEN"].present?
+    Rails.env.production? || ENV["TASKRAIL_SERVICE_TOKEN"].present? || PersonalAccessToken.exists?
+  end
+
+  def api_scope
+    request.get? || request.head? ? "read" : "write"
   end
 
   def public_endpoint?

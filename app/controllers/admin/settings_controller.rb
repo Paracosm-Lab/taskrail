@@ -1,5 +1,8 @@
 module Admin
-  class SettingsController < ApplicationController
+  class SettingsController < ActionController::Base
+    include Devise::Controllers::Helpers
+
+    skip_forgery_protection
     before_action :require_admin_auth!
 
     def log_level
@@ -39,6 +42,40 @@ module Admin
       enabled = ActiveModel::Type::Boolean.new.cast(params.require(:enabled))
       RuntimeSettings.set_maintenance!(enabled)
       render json: { maintenance: RuntimeSettings.maintenance? }
+    end
+
+    private
+
+    def require_admin_auth!
+      return if current_user&.admin?
+      return if valid_personal_access_token?
+      return if legacy_admin_token_valid?
+
+      if ENV["TASKRAIL_ADMIN_TOKEN"].blank? && !Rails.env.production?
+        render json: { error: "admin_not_configured" }, status: :service_unavailable
+      else
+        render json: { error: "forbidden", detail: "admin token required" }, status: :forbidden
+      end
+    end
+
+    def valid_personal_access_token?
+      token = PersonalAccessToken.authenticate(bearer_token)
+      return false unless token&.includes_scope?("admin")
+      return false unless token.user.admin?
+
+      token.mark_used!
+      true
+    end
+
+    def legacy_admin_token_valid?
+      admin_token = ENV["TASKRAIL_ADMIN_TOKEN"].to_s
+      admin_token.present? && ActiveSupport::SecurityUtils.secure_compare(bearer_token, admin_token)
+    rescue ArgumentError
+      false
+    end
+
+    def bearer_token
+      @bearer_token ||= request.authorization.to_s[/\ABearer (.+)\z/, 1].to_s
     end
   end
 end

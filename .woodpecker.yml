@@ -80,8 +80,7 @@ steps:
   sbom:
     image: alpine:3.20
     commands:
-      - apk add --no-cache curl
-      - curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+      - apk add --no-cache syft
       - syft dir:. -o cyclonedx-json=sbom.json
     depends_on:
       - test

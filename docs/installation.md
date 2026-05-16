@@ -57,10 +57,12 @@ bin/taskrail doctor
 
 ```bash
 TASKRAIL_API_URL=http://localhost:3000
+TASKRAIL_SERVICE_TOKEN=<legacy-service-token>
+TASKRAIL_ADMIN_TOKEN=<admin-token>
 GITHUB_WEBHOOK_SECRET=<webhook-secret>
 ```
 
-Adapter-specific variables depend on the adapters you enable. The fake adapter requires no external secrets.
+Production API requests require either a personal access token or `TASKRAIL_SERVICE_TOKEN`. GitHub webhooks fail closed unless `GITHUB_WEBHOOK_SECRET` is configured. Adapter-specific variables depend on the adapters you enable. The fake adapter requires no external secrets.
 
 ## Next Step
 

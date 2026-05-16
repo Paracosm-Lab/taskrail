@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_15_000200) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_16_012500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -42,6 +42,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_000200) do
     t.index ["status"], name: "index_claims_on_status"
     t.index ["work_item_id"], name: "index_claims_on_work_item_id"
     t.check_constraint "status >= 0 AND status <= 3", name: "claims_status_check"
+  end
+
+  create_table "personal_access_tokens", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.string "name", null: false
+    t.string "token_digest", null: false
+    t.string "token_prefix", null: false
+    t.string "scopes", default: [], null: false, array: true
+    t.datetime "last_used_at"
+    t.datetime "revoked_at"
+    t.datetime "expires_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["token_digest"], name: "index_personal_access_tokens_on_token_digest", unique: true
+    t.index ["user_id", "revoked_at"], name: "index_personal_access_tokens_on_user_id_and_revoked_at"
+    t.index ["user_id"], name: "index_personal_access_tokens_on_user_id"
   end
 
   create_table "pipes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -140,6 +156,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_000200) do
     t.index ["work_item_id"], name: "index_transition_logs_on_work_item_id"
   end
 
+  create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "email", default: "", null: false
+    t.string "encrypted_password", default: "", null: false
+    t.string "reset_password_token"
+    t.datetime "reset_password_sent_at"
+    t.datetime "remember_created_at"
+    t.boolean "admin", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "lower((email)::text)", name: "index_users_on_lower_email", unique: true
+    t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
+  end
+
   create_table "work_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "title", null: false
     t.string "spec_url", null: false
@@ -176,6 +205,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_15_000200) do
   add_foreign_key "artifacts", "claims"
   add_foreign_key "artifacts", "work_items"
   add_foreign_key "claims", "work_items"
+  add_foreign_key "personal_access_tokens", "users"
   add_foreign_key "pipes", "work_queues", column: "from_queue_id"
   add_foreign_key "pipes", "work_queues", column: "to_queue_id"
   add_foreign_key "reports", "claims"
