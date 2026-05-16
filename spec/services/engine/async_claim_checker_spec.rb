@@ -57,6 +57,23 @@ RSpec.describe Engine::AsyncClaimChecker do
     expect(claim.work_item.transition_logs.last.trigger).to eq("retry")
   end
 
+  it "skips a claim already completed when the lock is acquired (re-check guard)" do
+    claim = build_async_claim
+    # Simulate the TOCTOU race: the outer query fetched this claim as active,
+    # but another worker completed it before we acquired the lock.
+    claim.update!(status: :completed, async_execution: false, completed_at: Time.current)
+
+    # The re-check guard inside process_claim should short-circuit before ever
+    # reaching CodexCliPoller.
+    expect(CodexCliPoller).not_to receive(:new)
+
+    described_class.new.send(:process_claim, claim)
+
+    # Claim remains completed and no reports were added
+    expect(claim.reload).to be_completed
+    expect(claim.reports.count).to eq(0)
+  end
+
   def build_async_claim
     queue = WorkQueue.create!(name: "Codex", slug: "codex-#{SecureRandom.hex(4)}", stages: %w[build test])
     StageConfig.create!(work_queue: queue, stage_name: "build", adapter_type: "codex", completion_criteria: ["branch_created"], adapter_config: { "poll_command" => "codex", "poll_args" => ["status", "--json"] })
