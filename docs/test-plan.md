@@ -2,6 +2,8 @@
 
 This plan keeps Taskrail testable without manual clicking. Every release candidate should pass the automated gates below before it is considered ready to merge or deploy.
 
+For the concrete inventory of E2E layers, latest run evidence, live smoke scenarios, and known follow-ups, see [Test Catalog](./test-catalog.md).
+
 ## Scope
 
 The plan covers:
