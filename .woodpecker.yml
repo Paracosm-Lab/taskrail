@@ -27,6 +27,18 @@ steps:
     when:
       event: [push, pull_request, manual]
 
+  validate_queues:
+    image: ruby:3.2.0
+    commands:
+      - apt-get update -qq
+      - apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config
+      - bundle install --jobs 4 --retry 3
+      - bundle exec rake queues:validate
+    depends_on:
+      - lint
+    when:
+      event: [push, pull_request, manual]
+
   # Type checking: not yet configured. Add Sorbet or Steep when warranted.
   security_scan:
     image: ruby:3.2.0
@@ -38,6 +50,7 @@ steps:
     depends_on:
       - format
       - secret-scan
+      - validate_queues
     when:
       event: [push, pull_request, manual]
 
