@@ -170,15 +170,15 @@ module Engine
     end
 
     def validated_decompose_children
-      raw_children = decompose_children
-      raise InvalidSpawnDefinition, "decompose children must be an array" unless raw_children.is_a?(Array)
-
-      raw_children.map do |child|
-        raise InvalidSpawnDefinition, "decompose child must be an object" unless child.is_a?(Hash)
-        raise InvalidSpawnDefinition, "decompose child title is required" if child["title"].blank?
-        raise InvalidSpawnDefinition, "decompose child tags must be an object" unless child.fetch("tags", {}).is_a?(Hash)
-
-        child
+      @validated_decompose_children ||= begin
+        raw_children = decompose_children
+        raise InvalidSpawnDefinition, "decompose children must be an array" unless raw_children.is_a?(Array)
+        raw_children.map do |child|
+          raise InvalidSpawnDefinition, "decompose child must be an object" unless child.is_a?(Hash)
+          raise InvalidSpawnDefinition, "decompose child title is required" if child["title"].blank?
+          raise InvalidSpawnDefinition, "decompose child tags must be an object" unless child.fetch("tags", {}).is_a?(Hash)
+          child
+        end
       end
     end
 
