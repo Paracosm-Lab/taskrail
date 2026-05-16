@@ -66,6 +66,10 @@ module Adapters
       configured_artifacts = submitter_result.metadata.fetch("artifacts", [])
       return configured_artifacts if configured_artifacts.any?
 
+      final_message = submitter_result.metadata["final_message"].presence || submitter_result.stdout
+      structured_artifacts = structured_fields(final_message)["artifacts"]
+      return structured_artifacts if structured_artifacts.is_a?(Array) && structured_artifacts.any?
+
       branch_name = submitter_result.metadata["branch"] || submitter_result.metadata.dig("artifact", "branch")
       return [] if branch_name.blank?
 

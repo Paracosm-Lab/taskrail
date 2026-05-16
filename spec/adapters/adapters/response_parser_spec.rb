@@ -114,5 +114,42 @@ RSpec.describe Adapters::ResponseParser do
       expect(fields).not_to have_key("random_field")
       expect(fields).not_to have_key("assessments")
     end
+
+    it "extracts development workflow fields from a plain JSON response" do
+      response = <<~JSON
+        {
+          "children": [
+            { "title": "Build calendar export", "spec_inline": "Add DTSTART and SUMMARY", "tags": { "slice": "calendar" } }
+          ],
+          "verdict": "approved",
+          "feedback": "ship it",
+          "artifacts": [
+            { "kind": "branch", "data": { "name": "taskrail/calendar-export" } }
+          ]
+        }
+      JSON
+
+      fields = described_class.extract_structured_fields(response)
+
+      expect(fields["children"].first["title"]).to eq("Build calendar export")
+      expect(fields["verdict"]).to eq("approved")
+      expect(fields["feedback"]).to eq("ship it")
+      expect(fields["artifacts"].first).to eq("kind" => "branch", "data" => { "name" => "taskrail/calendar-export" })
+    end
+
+    it "extracts structured fields from Claude JSON output wrappers" do
+      response = JSON.dump(
+        "type" => "result",
+        "result" => <<~TEXT
+          ```json
+          { "verdict": "approved" }
+          ```
+        TEXT
+      )
+
+      fields = described_class.extract_structured_fields(response)
+
+      expect(fields["verdict"]).to eq("approved")
+    end
   end
 end
