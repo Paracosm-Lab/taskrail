@@ -18,7 +18,9 @@ module Engine
     def call
       @claim.update!(started_at: Time.current) unless @claim.started_at
       assignment = AssignmentBuilder.new(claim: @claim, stage_config: @stage_config).build
-      @claim.update!(assignment: assignment.deep_stringify_keys)
+      # safe_metadata recursively redacts all sensitive keys (prompt, agent_prompt, tokens, etc.)
+      sanitized = TraceRedactor.safe_metadata(assignment.deep_stringify_keys)
+      @claim.update!(assignment: sanitized)
 
       result = adapter.execute(assignment)
       return start_async_result(result) if result.is_a?(Engine::AsyncAdapterResult)
