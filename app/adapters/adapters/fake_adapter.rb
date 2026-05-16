@@ -1,18 +1,24 @@
+require_relative "base_adapter"
+
+module Adapters
+  class FakeAdapter < BaseAdapter; end
+end
+
+require_relative "fake_adapter/development_stages"
+require_relative "fake_adapter/operational_stages"
+require_relative "fake_adapter/security_stages"
+require_relative "fake_adapter/quality_stages"
+require_relative "fake_adapter/docs_and_api_stages"
+require_relative "fake_adapter/data_and_infra_stages"
+
 module Adapters
   class FakeAdapter < BaseAdapter
-    require_relative "fake_adapter/development_stages"
-    require_relative "fake_adapter/operational_stages"
-    require_relative "fake_adapter/security_stages"
-    require_relative "fake_adapter/quality_stages"
-    require_relative "fake_adapter/docs_and_api_stages"
-    require_relative "fake_adapter/data_and_infra_stages"
-
-    include DevelopmentStages
-    include OperationalStages
-    include SecurityStages
-    include QualityStages
-    include DocsAndApiStages
-    include DataAndInfraStages
+    include Adapters::FakeAdapter::DevelopmentStages
+    include Adapters::FakeAdapter::OperationalStages
+    include Adapters::FakeAdapter::SecurityStages
+    include Adapters::FakeAdapter::QualityStages
+    include Adapters::FakeAdapter::DocsAndApiStages
+    include Adapters::FakeAdapter::DataAndInfraStages
 
     STAGE_HANDLERS = {
       "intake"                  => :intake_result,
