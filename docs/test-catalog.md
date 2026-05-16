@@ -59,6 +59,7 @@ These runs exercise real local services and CLIs beyond unit/request specs.
 | #6 | Support current Codex JSONL output | Push and PR Woodpecker checks passed. |
 | #7 | Support structured agent workflow outputs | Push and PR Woodpecker checks passed. |
 | #8 | Document branch artifact verification follow-up | Push and PR Woodpecker checks passed. |
+| #10 | Verify branch artifacts against workspace Git | Push and PR Woodpecker checks passed; push pipeline `50` ran `sbom_upload` and the SBOM was verified on the QNAP NAS. |
 
 `pull_request_closed` pipelines have repeatedly failed at the Woodpecker Postgres service with exit `137`. Those failures happen after merge and before app steps; they are tracked as CI infrastructure noise unless they start affecting push or PR gates.
 
