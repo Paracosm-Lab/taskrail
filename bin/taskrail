@@ -311,7 +311,11 @@ class TaskRailCli
 
   def fetch_raw(path)
     uri = URI.join(@base_url, path)
-    response = Net::HTTP.get_response(uri)
+    request = Net::HTTP::Get.new(uri)
+    apply_auth(request)
+    response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == "https") do |http|
+      http.request(request)
+    end
     body = response.body.to_s.gsub(/\s+/, " ").strip
     {
       status: response.code.to_i,
@@ -322,6 +326,14 @@ class TaskRailCli
 
   def post(path, body)
     print_response(@client.post_json(path, body))
+  end
+
+  def apply_auth(request)
+    token = @env["TASKRAIL_API_TOKEN"].to_s
+    token = @env["TASKRAIL_SERVICE_TOKEN"].to_s if token.empty?
+    return if token.empty?
+
+    request["Authorization"] = "Bearer #{token}"
   end
 
   def print_response(parsed)

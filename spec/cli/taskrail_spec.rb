@@ -21,7 +21,7 @@ RSpec.describe "bin/taskrail" do
         body = socket.read(headers.fetch("content-length", "0").to_i)
         method, full_path, = request_line.split(" ")
         path, query_string = full_path.split("?", 2)
-        requests << { method: method, path: path, query: query_string, body: body }
+        requests << { method: method, path: path, query: query_string, body: body, headers: headers }
         response_payload = response_for(response_body, full_path)
         response = JSON.dump(response_payload)
         socket.write "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: #{response.bytesize}\r\nConnection: close\r\n\r\n#{response}"
@@ -280,6 +280,23 @@ RSpec.describe "bin/taskrail" do
         "/health",
         "/up"
       )
+    end
+  end
+
+  it "uses TASKRAIL_API_TOKEN for doctor API checks" do
+    responses = {
+      "/api/v1/queues" => { queues: [{ slug: "development" }] },
+      "/api/v1/costs" => { total_cost_cents: 0 },
+      "/health" => { status: "ok" },
+      "/up" => { status: "ok" }
+    }
+
+    with_server(responses) do |api_url, requests|
+      _stdout, _stderr, status = run_cli(api_url, "doctor", env: { "TASKRAIL_API_TOKEN" => "pat-token" })
+
+      expect(status).to be_success
+      api_requests = 4.times.map { requests.pop }.select { |request| request[:path].start_with?("/api/") }
+      expect(api_requests.map { |request| request[:headers]["authorization"] }).to all(eq("Bearer pat-token"))
     end
   end
 end
