@@ -26,7 +26,7 @@ class CodexCliSubmitter
       stderr: stderr,
       exit_status: exit_status,
       duration_ms: ((finished - started) * 1000).round,
-      external_id: parsed["id"],
+      external_id: parsed["id"] || parsed["thread_id"],
       metadata: parsed
     )
   end
@@ -66,8 +66,33 @@ class CodexCliSubmitter
   end
 
   def parse_stdout(stdout)
-    JSON.parse(stdout)
-  rescue JSON::ParserError, TypeError
+    parsed = JSON.parse(stdout)
+    return parsed if parsed.is_a?(Hash)
+
     {}
+  rescue JSON::ParserError, TypeError
+    parse_jsonl_stdout(stdout)
+  end
+
+  def parse_jsonl_stdout(stdout)
+    events = stdout.to_s.lines.filter_map do |line|
+      JSON.parse(line)
+    rescue JSON::ParserError
+      nil
+    end
+    return {} if events.empty?
+
+    thread_started = events.find { |event| event["type"] == "thread.started" }
+    final_message = events.reverse.find { |event| event.dig("item", "type") == "agent_message" }
+    turn_completed = events.reverse.find { |event| event["type"] == "turn.completed" }
+
+    {
+      "thread_id" => thread_started&.fetch("thread_id", nil),
+      "status" => turn_completed ? "succeeded" : "running",
+      "final_message" => final_message&.dig("item", "text"),
+      "usage" => turn_completed&.fetch("usage", nil),
+      "events" => events,
+      "mode" => "jsonl"
+    }.compact
   end
 end

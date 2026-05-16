@@ -22,7 +22,13 @@ module Adapters
 
       trace_events = [trace_event(prompt, submitter_result, command)]
 
-      if submitter_result.exit_status.zero? && submitter_result.external_id.present?
+      if current_cli_completed?(submitter_result)
+        AgentResult.success(
+          report: sync_success_report(normalized_assignment, submitter_result),
+          artifacts: sync_artifacts(submitter_result),
+          trace_events: trace_events
+        )
+      elsif submitter_result.exit_status.zero? && submitter_result.external_id.present?
         Engine::AsyncAdapterResult.new(
           provider: "codex",
           external_id: submitter_result.external_id,
@@ -40,6 +46,35 @@ module Adapters
     end
 
     private
+
+    def current_cli_completed?(submitter_result)
+      submitter_result.exit_status.zero? &&
+        submitter_result.metadata["mode"] == "jsonl" &&
+        submitter_result.metadata["status"] == "succeeded"
+    end
+
+    def sync_success_report(assignment, submitter_result)
+      final_message = submitter_result.metadata["final_message"].presence || submitter_result.stdout
+      {
+        "summary" => "Codex completed #{assignment.dig('stage', 'name')}",
+        "response" => final_message,
+        "stage" => assignment.dig("stage", "name")
+      }.merge(structured_fields(final_message))
+    end
+
+    def sync_artifacts(submitter_result)
+      configured_artifacts = submitter_result.metadata.fetch("artifacts", [])
+      return configured_artifacts if configured_artifacts.any?
+
+      branch_name = submitter_result.metadata["branch"] || submitter_result.metadata.dig("artifact", "branch")
+      return [] if branch_name.blank?
+
+      [{ "kind" => "branch", "data" => { "name" => branch_name } }]
+    end
+
+    def structured_fields(message)
+      ResponseParser.extract_structured_fields(message)
+    end
 
     def async_metadata(submitter_result, config)
       submitter_result.metadata.merge(
