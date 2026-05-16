@@ -26,7 +26,7 @@ module Adapters
     end
 
     def self.json_objects(response)
-      candidates = response.scan(/```(?:json)?\s*\n(.*?)\n```/m).flatten
+      candidates = json_fence_blocks(response)
       candidates << response
 
       candidates.each_with_object([]) do |candidate, objects|
@@ -41,6 +41,35 @@ module Adapters
         next
       end
     end
+
+    def self.json_fence_blocks(response)
+      blocks = []
+      current = nil
+      capture = false
+
+      response.each_line do |line|
+        if current
+          if line.match?(/\A```\s*\z/)
+            blocks << current.join if capture
+            current = nil
+            capture = false
+          else
+            current << line if capture
+          end
+          next
+        end
+
+        fence = line.match(/\A```(?<language>[A-Za-z0-9_-]+)?\s*\z/)
+        next unless fence
+
+        language = fence[:language]
+        capture = language.blank? || language == "json"
+        current = []
+      end
+
+      blocks
+    end
     private_class_method :json_objects
+    private_class_method :json_fence_blocks
   end
 end

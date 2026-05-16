@@ -151,5 +151,30 @@ RSpec.describe Adapters::ResponseParser do
 
       expect(fields["verdict"]).to eq("approved")
     end
+
+    it "ignores non-JSON fenced code blocks before structured JSON" do
+      response = <<~TEXT
+        Verified with:
+
+        ```bash
+        ruby -Ilib -S rspec
+        ```
+
+        ```json
+        {
+          "artifacts": [
+            { "kind": "branch", "data": { "name": "taskrail/build", "commit": "abc123" } }
+          ]
+        }
+        ```
+      TEXT
+
+      fields = described_class.extract_structured_fields(response)
+
+      expect(fields["artifacts"].first).to eq(
+        "kind" => "branch",
+        "data" => { "name" => "taskrail/build", "commit" => "abc123" }
+      )
+    end
   end
 end
