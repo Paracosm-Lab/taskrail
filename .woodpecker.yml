@@ -7,7 +7,7 @@ steps:
       - bundle install --jobs 4 --retry 3
       - bin/rubocop --fail-level warning --except Layout
     when:
-      event: [push, pull_request]
+      event: [push, pull_request, manual]
 
   format:
     image: ruby:3.2.0
@@ -16,7 +16,7 @@ steps:
     depends_on:
       - lint
     when:
-      event: [push, pull_request]
+      event: [push, pull_request, manual]
 
   secret-scan:
     image: zricethezav/gitleaks:latest
@@ -25,7 +25,7 @@ steps:
     depends_on:
       - lint
     when:
-      event: [push, pull_request]
+      event: [push, pull_request, manual]
 
   # Type checking: not yet configured. Add Sorbet or Steep when warranted.
   security_scan:
@@ -39,7 +39,7 @@ steps:
       - format
       - secret-scan
     when:
-      event: [push, pull_request]
+      event: [push, pull_request, manual]
 
   test_ruby:
     image: ruby:3.2.0
@@ -54,7 +54,7 @@ steps:
     depends_on:
       - security_scan
     when:
-      event: [push, pull_request]
+      event: [push, pull_request, manual]
 
   test_tui:
     image: node:20
@@ -65,7 +65,7 @@ steps:
     depends_on:
       - security_scan
     when:
-      event: [push, pull_request]
+      event: [push, pull_request, manual]
 
   test:
     image: alpine:3.20
@@ -75,7 +75,7 @@ steps:
       - test_ruby
       - test_tui
     when:
-      event: [push, pull_request]
+      event: [push, pull_request, manual]
 
   sbom:
     image: alpine:3.20
@@ -87,7 +87,7 @@ steps:
       - test
     failure: ignore
     when:
-      event: [push, pull_request]
+      event: [push, pull_request, manual]
 
   sbom_upload:
     image: alpine:3.20
