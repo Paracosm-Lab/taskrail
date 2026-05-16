@@ -31,14 +31,19 @@ class QueueConfigValidator
 
     valid_stages = stages.is_a?(Array) ? stages : []
 
+    stages_without_config = valid_stages - stage_configs.keys
+    stages_without_config.each do |s|
+      errors << "#{label}: stage '#{s}' is listed in 'stages' but has no entry in 'stage_configs'"
+    end
+
     stage_configs.each do |stage_name, entry|
       unless valid_stages.include?(stage_name)
         errors << "#{label}: stage_configs key '#{stage_name}' is not listed in 'stages'"
       end
 
       adapter_type = entry.is_a?(Hash) ? entry["adapter_type"] : nil
-      if adapter_type.nil? || adapter_type.to_s.strip.empty?
-        errors << "#{label}: stage_configs['#{stage_name}'] is missing a non-blank 'adapter_type'"
+      unless adapter_type.is_a?(String) && !adapter_type.strip.empty?
+        errors << "#{label}: stage_configs['#{stage_name}'] is missing a non-blank string 'adapter_type'"
       end
     end
 

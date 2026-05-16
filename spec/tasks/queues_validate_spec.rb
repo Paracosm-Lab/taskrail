@@ -54,6 +54,17 @@ RSpec.describe QueueConfigValidator do
       end
     end
 
+    context "when a stage listed in 'stages' has no entry in 'stage_configs'" do
+      it "returns an error mentioning the missing stage" do
+        config = valid_config.merge(
+          "stages" => ["intake", "build"],
+          "stage_configs" => { "intake" => { "adapter_type" => "fake" } }
+        )
+        errors = described_class.validate(config, label: "missing_stage_config.yml")
+        expect(errors).to include(a_string_matching(/build.*listed in 'stages'.*no entry in 'stage_configs'/i))
+      end
+    end
+
     context "when a stage_config key is not listed in 'stages'" do
       it "returns an error identifying the offending key" do
         config = valid_config.merge(
@@ -88,6 +99,19 @@ RSpec.describe QueueConfigValidator do
           "done"   => { "adapter_type" => "noop" }
         }
         errors = described_class.validate(config, label: "blank_adapter.yml")
+        expect(errors).to include(a_string_matching(/intake.*adapter_type/i))
+      end
+    end
+
+    context "when a stage_config 'adapter_type' is an integer" do
+      it "returns an error for the non-string adapter_type" do
+        config = valid_config.dup
+        config["stage_configs"] = {
+          "intake" => { "adapter_type" => 0 },
+          "build"  => { "adapter_type" => "claude" },
+          "done"   => { "adapter_type" => "noop" }
+        }
+        errors = described_class.validate(config, label: "integer_adapter.yml")
         expect(errors).to include(a_string_matching(/intake.*adapter_type/i))
       end
     end

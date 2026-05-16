@@ -5,6 +5,11 @@ namespace :queues do
   desc "Validate all config/queues/*.yml files for required structure"
   task :validate do
     dir = File.expand_path("../../config/queues", __dir__)
+    yml_files = Dir[File.join(dir, "*.yml")]
+
+    abort "queues:validate: directory not found: #{dir}" unless Dir.exist?(dir)
+    abort "queues:validate: no *.yml files found in #{dir}" if yml_files.empty?
+
     errors_by_file = QueueConfigValidator.validate_dir(dir)
 
     if errors_by_file.any?
