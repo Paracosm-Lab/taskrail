@@ -60,6 +60,32 @@ RSpec.describe Cli::TaskRailApiClient do
     end
   end
 
+  it "uses TASKRAIL_API_TOKEN before the legacy service token" do
+    stub_const("ENV", ENV.to_hash.merge(
+      "TASKRAIL_API_TOKEN" => "pat-token",
+      "TASKRAIL_SERVICE_TOKEN" => "service-token"
+    ))
+
+    with_server do |api_url, requests|
+      described_class.new(base_url: api_url).get_json("/api/v1/queues")
+
+      expect(requests.pop[:headers]["authorization"]).to eq("Bearer pat-token")
+    end
+  end
+
+  it "falls back to TASKRAIL_SERVICE_TOKEN for legacy automation" do
+    stub_const("ENV", ENV.to_hash.merge(
+      "TASKRAIL_API_TOKEN" => "",
+      "TASKRAIL_SERVICE_TOKEN" => "service-token"
+    ))
+
+    with_server do |api_url, requests|
+      described_class.new(base_url: api_url).get_json("/api/v1/queues")
+
+      expect(requests.pop[:headers]["authorization"]).to eq("Bearer service-token")
+    end
+  end
+
   it "raises an HTTP error for non-success responses" do
     with_server(status: 500, response_body: { error: "boom" }) do |api_url, _requests|
       expect {

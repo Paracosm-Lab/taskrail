@@ -14,9 +14,10 @@ module Cli
       end
     end
 
-    def initialize(base_url:, bearer_token: ENV["TASKRAIL_SERVICE_TOKEN"])
+    def initialize(base_url:, bearer_token: nil)
       @base_url = base_url
-      @bearer_token = bearer_token.to_s
+      @bearer_token = bearer_token || ENV["TASKRAIL_API_TOKEN"].to_s
+      @bearer_token = ENV["TASKRAIL_SERVICE_TOKEN"].to_s if @bearer_token.empty?
     end
 
     def get_json(path)

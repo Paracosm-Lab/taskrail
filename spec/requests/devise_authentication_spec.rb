@@ -1,6 +1,16 @@
 require "rails_helper"
 
 RSpec.describe "Devise authentication", type: :request do
+  it "renders the sign-in page with the web layout" do
+    WorkQueue.create!(name: "Development", slug: "development-sign-in", stages: %w[intake done])
+
+    get new_user_session_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Log in")
+    expect(response.body).to include("development-sign-in")
+  end
+
   it "redirects unauthenticated web requests to sign in" do
     get "/"
 
