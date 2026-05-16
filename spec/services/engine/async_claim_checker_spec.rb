@@ -57,33 +57,21 @@ RSpec.describe Engine::AsyncClaimChecker do
     expect(claim.work_item.transition_logs.last.trigger).to eq("retry")
   end
 
-  it "does not double-process a claim that was completed in a previous pass" do
+  it "skips a claim already completed when the lock is acquired (re-check guard)" do
     claim = build_async_claim
-    poll_result = CodexCliPoller::Result.new(
-      status: "succeeded",
-      stdout: "done",
-      stderr: "",
-      exit_status: 0,
-      duration_ms: 10,
-      metadata: {
-        "report" => { "summary" => "Build complete" },
-        "artifacts" => [{ "kind" => "branch", "data" => { "name" => "taskrail/build-1" } }]
-      }
-    )
-    allow(CodexCliPoller).to receive(:new).and_return(instance_double(CodexCliPoller, call: poll_result))
+    # Simulate the TOCTOU race: the outer query fetched this claim as active,
+    # but another worker completed it before we acquired the lock.
+    claim.update!(status: :completed, async_execution: false, completed_at: Time.current)
 
-    # First pass completes the claim
-    described_class.new.call
-    expect(claim.reload).to be_completed
-
-    # Second pass: the outer query filters out completed claims, so CodexCliPoller is not called again
+    # The re-check guard inside process_claim should short-circuit before ever
+    # reaching CodexCliPoller.
     expect(CodexCliPoller).not_to receive(:new)
-    described_class.new.call
 
-    # Claim state is unchanged from the first pass
+    described_class.new.send(:process_claim, claim)
+
+    # Claim remains completed and no reports were added
     expect(claim.reload).to be_completed
-    expect(claim.reports.count).to eq(1)
-    expect(claim.artifacts.count).to eq(1)
+    expect(claim.reports.count).to eq(0)
   end
 
   def build_async_claim
