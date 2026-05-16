@@ -86,6 +86,37 @@ RSpec.describe Adapters::CodexAdapter do
     expect(result.artifacts).to include("kind" => "branch", "data" => { "name" => "taskrail/current-codex" })
   end
 
+  it "extracts artifacts from the current Codex final message" do
+    submitter_result = CodexCliSubmitter::Result.new(
+      stdout: "",
+      stderr: "",
+      exit_status: 0,
+      duration_ms: 8,
+      external_id: "thread-1",
+      metadata: {
+        "mode" => "jsonl",
+        "status" => "succeeded",
+        "thread_id" => "thread-1",
+        "final_message" => <<~TEXT
+          Built the slice.
+
+          ```json
+          {
+            "artifacts": [
+              { "kind": "branch", "data": { "name": "taskrail/final-message-branch" } }
+            ]
+          }
+          ```
+        TEXT
+      }
+    )
+    allow(CodexCliSubmitter).to receive(:new).and_return(instance_double(CodexCliSubmitter, call: submitter_result))
+
+    result = described_class.new.execute(assignment)
+
+    expect(result.artifacts).to include("kind" => "branch", "data" => { "name" => "taskrail/final-message-branch" })
+  end
+
   it "returns failure when Codex submission exits non-zero" do
     submitter_result = CodexCliSubmitter::Result.new(
       stdout: "",
