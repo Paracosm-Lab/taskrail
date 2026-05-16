@@ -49,6 +49,7 @@ These runs exercise real local services and CLIs beyond unit/request specs.
 | Docker Compose fixture | Fake services from `cookbooks/docker-compose.yml`, health checks, adapter execution | Passed; compose stack was torn down. |
 | Safe real-agent workflow | Temporary queue with Claude intake, Codex read-only build, shell validation, Claude review | Work item `f6574f3e-4df2-4d18-acb2-9ca86333a53d` reached `done/completed`; artifacts included `agent_report`, `branch`, `test_results`, `lint`, and `coverage`. |
 | Full feature-development workflow | Disposable workspace `/tmp/taskrail-workspaces/feature-development-full`, real Codex edit/build, shell validation, Claude review | Work item `7bbd368c-6204-4f4b-a046-31c9927c9038` reached `done/completed`; fixture spec passed with `1 example, 0 failures`. |
+| Verified branch-artifact feature workflow | Disposable workspace `/tmp/taskrail-workspaces/feature-development-verified-2`, real Codex edit/build with normal workspace Git writes, shell validation, Claude review | Work item `b7bf066d-f443-40a8-b6b3-7aff2c7c8ce7` reached `done/completed`; `branch_created` verified branch `taskrail/b7bf066d-calendar-export-2` at commit `397fc786b1e36d16760b2a83eccc532938076813` in the workspace Git repository. |
 | Production image smoke | `docker build -t taskrail:e2e-local .`, isolated Postgres container, app container in `RAILS_ENV=production` | Image built, `/health` returned 200, unauthenticated API returned 401, PAT-backed API worked, `bin/smoke-prod` passed, and a container-created `development` work item reached `done/completed`. |
 
 ## CI Evidence
@@ -61,7 +62,7 @@ These runs exercise real local services and CLIs beyond unit/request specs.
 
 `pull_request_closed` pipelines have repeatedly failed at the Woodpecker Postgres service with exit `137`. Those failures happen after merge and before app steps; they are tracked as CI infrastructure noise unless they start affecting push or PR gates.
 
-## Known Follow-ups
+## Known Notes
 
-- Branch artifact verification is not strict enough for production feature queues. The full feature-development E2E found that Codex could report a branch artifact from an alternate `.taskrail-git` directory when the primary workspace `.git` was not writable. The follow-up is recorded in `docs/specs/2026-05-15-blockers.md`.
+- Branch artifact verification is now enforced for workspace-backed stages. The original alternate `.taskrail-git` finding and resolution are recorded in `docs/specs/2026-05-15-blockers.md`.
 - RuboCop currently reports convention-only autocorrectable offenses while still passing under `--fail-level warning`. Treat cleanup as separate from E2E readiness unless the fail level changes.
