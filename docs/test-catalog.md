@@ -8,7 +8,7 @@ Latest local E2E sweep: 2026-05-15 local time.
 
 | Layer | Command or flow | Latest result |
 | --- | --- | --- |
-| Cookbook E2E suite | `bundle exec rspec spec/e2e` | Passed: `58 examples, 0 failures` |
+| Cookbook E2E suite | `bundle exec rspec spec/e2e` | Passed: `83 examples, 0 failures` |
 | Full Ruby suite | `bundle exec rspec` | Passed: `655 examples, 0 failures` |
 | TUI suite | `cd tui && npm test` | Passed: `7 tests, 0 failures` |
 | Brakeman | `bin/brakeman --no-pager --skip-files cookbooks/,test/fixtures/,spec/fixtures/ -x EOLRuby` | Passed: no warnings |
@@ -53,6 +53,7 @@ These runs exercise real local services and CLIs beyond unit/request specs.
 | Production image smoke | `docker build -t taskrail:e2e-local .`, isolated Postgres container, app container in `RAILS_ENV=production` | Image built, `/health` returned 200, unauthenticated API returned 401, PAT-backed API worked, `bin/smoke-prod` passed, and a container-created `development` work item reached `done/completed`. |
 | Web/API/engine user journey | `bundle exec rspec spec/e2e/web_user_journey_spec.rb` | Passed. Covers real Devise session login, web PAT creation, PAT-authenticated API work item creation, engine advancement through the fake adapter, and web UI verification of the completed item. |
 | Seeded queue contract matrix | `bundle exec rspec spec/e2e/seeded_queue_contracts_spec.rb` | Passed: `24 examples, 0 failures`. Loads every queue YAML, forces deterministic fake adapters, creates a work item per queue, and verifies each queue reaches `done/completed` through its configured stages and predicates. |
+| Actual seeded cookbook jobs | `bundle exec rspec spec/e2e/actual_seeded_cookbook_jobs_spec.rb` | Passed: `25 examples, 0 failures`. Submits a real work item through each configured cookbook queue using its seeded YAML and cookbook spec/doc input, then runs the engine until the job reaches `done/completed`. |
 
 ## CI Evidence
 
