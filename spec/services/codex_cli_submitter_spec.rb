@@ -28,6 +28,33 @@ RSpec.describe CodexCliSubmitter do
     expect(result.metadata["branch"]).to eq("sc-1")
   end
 
+  it "parses current Codex JSONL stdout" do
+    result = described_class.new(
+      command: "ruby",
+      args: [
+        "-rjson",
+        "-e",
+        <<~'RUBY'
+          STDIN.read
+          puts({ type: "thread.started", thread_id: "thread-1" }.to_json)
+          puts({ type: "item.completed", item: { type: "agent_message", text: "done" } }.to_json)
+          puts({ type: "turn.completed", usage: { input_tokens: 1, output_tokens: 2 } }.to_json)
+        RUBY
+      ],
+      prompt: "build this",
+      working_directory: Rails.root.to_s,
+      timeout_seconds: 1
+    ).call
+
+    expect(result.external_id).to eq("thread-1")
+    expect(result.metadata).to include(
+      "thread_id" => "thread-1",
+      "status" => "succeeded",
+      "final_message" => "done",
+      "mode" => "jsonl"
+    )
+  end
+
   it "captures non-zero exits without raising" do
     result = described_class.new(
       command: "ruby",

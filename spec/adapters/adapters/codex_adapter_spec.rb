@@ -41,6 +41,51 @@ RSpec.describe Adapters::CodexAdapter do
     expect(result.metadata).to include("exit_status" => 0, "output_artifact_kind" => "branch")
   end
 
+  it "returns a synchronous success for current Codex JSONL completed output" do
+    submitter_result = CodexCliSubmitter::Result.new(
+      stdout: "{\"type\":\"thread.started\",\"thread_id\":\"thread-1\"}\n",
+      stderr: "",
+      exit_status: 0,
+      duration_ms: 8,
+      external_id: "thread-1",
+      metadata: {
+        "mode" => "jsonl",
+        "status" => "succeeded",
+        "thread_id" => "thread-1",
+        "final_message" => "Codex finished"
+      }
+    )
+    allow(CodexCliSubmitter).to receive(:new).and_return(instance_double(CodexCliSubmitter, call: submitter_result))
+
+    result = described_class.new.execute(assignment)
+
+    expect(result.status).to eq("success")
+    expect(result.report).to include("summary" => "Codex completed build", "response" => "Codex finished")
+    expect(result.trace_events.first["event_type"]).to eq("codex_submit")
+  end
+
+  it "extracts branch artifacts from current Codex JSONL metadata when present" do
+    submitter_result = CodexCliSubmitter::Result.new(
+      stdout: "",
+      stderr: "",
+      exit_status: 0,
+      duration_ms: 8,
+      external_id: "thread-1",
+      metadata: {
+        "mode" => "jsonl",
+        "status" => "succeeded",
+        "thread_id" => "thread-1",
+        "final_message" => "Codex finished",
+        "branch" => "taskrail/current-codex"
+      }
+    )
+    allow(CodexCliSubmitter).to receive(:new).and_return(instance_double(CodexCliSubmitter, call: submitter_result))
+
+    result = described_class.new.execute(assignment)
+
+    expect(result.artifacts).to include("kind" => "branch", "data" => { "name" => "taskrail/current-codex" })
+  end
+
   it "returns failure when Codex submission exits non-zero" do
     submitter_result = CodexCliSubmitter::Result.new(
       stdout: "",
