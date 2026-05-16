@@ -78,8 +78,9 @@ steps:
       event: [push, pull_request, manual]
 
   sbom:
-    image: anchore/syft:latest
+    image: alpine:3.20
     commands:
+      - apk add --no-cache syft
       - syft dir:. -o cyclonedx-json=sbom.json
     depends_on:
       - test
