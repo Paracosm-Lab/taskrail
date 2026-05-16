@@ -14,6 +14,24 @@ module Adapters
         test_result(assignment)
       when "review"
         review_result(assignment)
+      when "cluster_failures"
+        cluster_failures_result
+      when "assess_instrumentation"
+        assess_instrumentation_result
+      when "map_runbooks"
+        map_runbooks_result
+      when "draft_runbook"
+        draft_runbook_result
+      when "staging_validation"
+        staging_validation_result
+      when "run_checks"
+        run_checks_result
+      when "security_scan"
+        pr_security_scan_result
+      when "coverage_check"
+        coverage_check_result
+      when "architectural_review"
+        architectural_review_result
       when "map_user_flows"
         map_user_flows_result
       when "identify_boundaries"
@@ -142,6 +160,104 @@ module Adapters
       AgentResult.success(
         report: { "summary" => "approved fake diff", "verdict" => "approved" },
         trace_events: [trace_event("approved fake diff")]
+      )
+    end
+
+    def cluster_failures_result
+      AgentResult.success(
+        report: { "summary" => "clustered operational failures" },
+        artifacts: [
+          { "kind" => "clusters", "data" => { "clusters" => [{ "name" => "db-pool", "signals" => 3 }] } }
+        ],
+        trace_events: [trace_event("clustered operational failures")]
+      )
+    end
+
+    def assess_instrumentation_result
+      AgentResult.success(
+        report: { "summary" => "assessed operational instrumentation" },
+        artifacts: [
+          { "kind" => "instrumentation_assessment", "data" => { "complete" => true, "gaps" => [] } }
+        ],
+        trace_events: [trace_event("assessed operational instrumentation")]
+      )
+    end
+
+    def map_runbooks_result
+      AgentResult.success(
+        report: { "summary" => "mapped operational runbooks" },
+        artifacts: [
+          { "kind" => "runbook_mapping", "data" => { "mappings" => [{ "cluster" => "db-pool", "runbook" => "database_pool_saturation" }] } }
+        ],
+        trace_events: [trace_event("mapped operational runbooks")]
+      )
+    end
+
+    def draft_runbook_result
+      AgentResult.success(
+        report: { "summary" => "drafted operational runbook" },
+        artifacts: [
+          { "kind" => "runbook_draft", "data" => { "title" => "Database pool saturation", "steps" => ["inspect pool", "scale workers"] } }
+        ],
+        trace_events: [trace_event("drafted operational runbook")]
+      )
+    end
+
+    def staging_validation_result
+      AgentResult.success(
+        report: { "summary" => "validated runbook in staging", "validation_passed" => true },
+        trace_events: [trace_event("validated runbook in staging")]
+      )
+    end
+
+    def run_checks_result
+      AgentResult.success(
+        report: { "summary" => "PR checks passed" },
+        artifacts: [
+          {
+            "kind" => "check_results",
+            "data" => {
+              "lint" => { "passed" => true, "errors" => [] },
+              "tests" => { "passed" => true, "failures" => [] },
+              "build" => { "passed" => true, "errors" => [] }
+            }
+          }
+        ],
+        trace_events: [trace_event("ran PR checks")]
+      )
+    end
+
+    def pr_security_scan_result
+      AgentResult.success(
+        report: { "summary" => "reviewed PR security impact" },
+        artifacts: [
+          { "kind" => "security_findings", "data" => { "findings" => [], "blocking_count" => 0 } }
+        ],
+        trace_events: [trace_event("reviewed PR security impact")]
+      )
+    end
+
+    def coverage_check_result
+      AgentResult.success(
+        report: { "summary" => "checked PR coverage" },
+        artifacts: [
+          {
+            "kind" => "coverage_report",
+            "data" => {
+              "overall_delta" => 0.0,
+              "changed_files" => [],
+              "new_files_without_tests" => []
+            }
+          }
+        ],
+        trace_events: [trace_event("checked PR coverage")]
+      )
+    end
+
+    def architectural_review_result
+      AgentResult.success(
+        report: { "summary" => "approved PR architecture", "verdict" => "approved" },
+        trace_events: [trace_event("approved PR architecture")]
       )
     end
 
