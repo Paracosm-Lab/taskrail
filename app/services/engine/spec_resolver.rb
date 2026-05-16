@@ -18,6 +18,8 @@ module Engine
       else
         @spec_url
       end
+    rescue Errno::ENOENT, Errno::EACCES => e
+      raise FetchError, "spec file not found: #{@spec_url}"
     end
 
     private
@@ -40,6 +42,8 @@ module Engine
       return response.body if response.is_a?(Net::HTTPSuccess)
 
       raise FetchError, "failed to fetch spec #{@spec_url}: #{response.code} #{response.message}"
+    rescue SocketError, Timeout::Error, Errno::ECONNREFUSED, EOFError => e
+      raise FetchError, "network error fetching spec #{@spec_url}: #{e.message}"
     end
   end
 end

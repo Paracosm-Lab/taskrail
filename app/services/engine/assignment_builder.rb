@@ -58,8 +58,15 @@ module Engine
     end
 
     def context_payload
+      spec_content = begin
+        SpecResolver.new(@work_item.spec_url).resolve
+      rescue Engine::SpecResolver::FetchError => e
+        Rails.logger.warn "SpecResolver failed for work_item #{@work_item.id}: #{e.message}"
+        nil
+      end
+
       {
-        spec_content: SpecResolver.new(@work_item.spec_url).resolve,
+        spec_content: spec_content,
         upstream_reports: upstream_reports,
         upstream_artifacts: upstream_artifacts,
         feedback: @work_item.metadata["feedback"],

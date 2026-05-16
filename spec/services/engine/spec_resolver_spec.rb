@@ -38,4 +38,24 @@ RSpec.describe Engine::SpecResolver do
   it "passes opaque spec URLs through unchanged" do
     expect(described_class.new("obsidian://note/taskrail").resolve).to eq("obsidian://note/taskrail")
   end
+
+  it "raises FetchError for a missing absolute file path" do
+    expect {
+      described_class.new("/nonexistent/path/to/spec.md").resolve
+    }.to raise_error(Engine::SpecResolver::FetchError, /not found/)
+  end
+
+  it "raises FetchError for a missing relative file path" do
+    expect {
+      described_class.new("./tmp/nonexistent-spec-resolver-test.md").resolve
+    }.to raise_error(Engine::SpecResolver::FetchError)
+  end
+
+  it "raises FetchError when a network error occurs during HTTP fetch" do
+    allow(Net::HTTP).to receive(:get_response).and_raise(SocketError, "Failed to open TCP connection")
+
+    expect {
+      described_class.new("https://example.com/spec.md").resolve
+    }.to raise_error(Engine::SpecResolver::FetchError, /network error/)
+  end
 end
