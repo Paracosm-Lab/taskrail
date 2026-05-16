@@ -51,3 +51,4 @@
 /.superpowers/
 /strategy/
 .DS_Store
+.worktrees/

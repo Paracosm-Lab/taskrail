@@ -28,7 +28,7 @@ module Engine
 
     def call
       results = predicate_results
-      return decompose if results.all?(&:passed?) && decompose_children.any?
+      return decompose if results.all?(&:passed?) && validated_decompose_children.any?
       return advance if results.all?(&:passed?)
       return regress_or_block_review if review_regression_requested?
       return regress_or_block_feature_validation if feature_validation_regression_requested?(results)
@@ -87,7 +87,12 @@ module Engine
       return if spawn_items.blank?
 
       spawned_ids = spawn_items.map do |item_def|
-        target_queue = WorkQueue.find_by!(slug: item_def.fetch("queue_slug"))
+        slug = item_def.fetch("queue_slug")
+        target_queue = begin
+          WorkQueue.find_by!(slug: slug)
+        rescue ActiveRecord::RecordNotFound
+          raise InvalidSpawnDefinition, "spawn item references unknown queue: #{slug}"
+        end
         title = item_def.fetch("title")
 
         WorkItem.create!(
@@ -139,8 +144,9 @@ module Engine
     def decompose
       from_stage = @work_item.stage_name
       child_stage = next_stage
+      children = validated_decompose_children
 
-      decompose_children.each_with_index do |child, index|
+      children.each_with_index do |child, index|
         @work_item.children.create!(
           work_queue: @work_item.work_queue,
           title: child.fetch("title"),
@@ -159,8 +165,21 @@ module Engine
         from_stage: from_stage,
         to_stage: child_stage,
         trigger: "decompose",
-        details: { criteria: @stage_config.completion_criteria, children_count: decompose_children.count }
+        details: { criteria: @stage_config.completion_criteria, children_count: children.count }
       )
+    end
+
+    def validated_decompose_children
+      @validated_decompose_children ||= begin
+        raw_children = decompose_children
+        raise InvalidSpawnDefinition, "decompose children must be an array" unless raw_children.is_a?(Array)
+        raw_children.map do |child|
+          raise InvalidSpawnDefinition, "decompose child must be an object" unless child.is_a?(Hash)
+          raise InvalidSpawnDefinition, "decompose child title is required" if child["title"].blank?
+          raise InvalidSpawnDefinition, "decompose child tags must be an object" unless child.fetch("tags", {}).is_a?(Hash)
+          child
+        end
+      end
     end
 
     def decompose_children
