@@ -18,8 +18,10 @@ module Engine
       else
         @spec_url
       end
-    rescue Errno::ENOENT, Errno::EACCES => e
+    rescue Errno::ENOENT
       raise FetchError, "spec file not found: #{@spec_url}"
+    rescue Errno::EACCES
+      raise FetchError, "permission denied reading spec: #{@spec_url}"
     end
 
     private
