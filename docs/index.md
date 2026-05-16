@@ -26,6 +26,7 @@ Define stages. Run agents. Observe execution. Reuse the queue.
 - [API Reference](./api.md) - HTTP endpoints for queues, work items, costs, digests, streams, pipes, and GitHub webhooks.
 - [Configuration](./configuration.md) - queue YAML, stage configs, adapters, predicates, prompts, pipes, and runtime settings.
 - [Operations](./operations.md) - running the engine, async claims, diagnostics, testing, and operational notes.
+- [Test Plan](./test-plan.md) - automated gates for auth, PATs, adapters, streams, CI, and release readiness.
 - [Troubleshooting](./troubleshooting.md) - common local and execution failures.
 - [Deployment](./deployment.md) - production deployment concerns.
 - [Comparison](./comparison.md) - why Taskrail exists alongside generic runners.

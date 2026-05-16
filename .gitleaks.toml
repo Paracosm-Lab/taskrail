@@ -6,5 +6,6 @@ description = "Intentional fake secrets in documentation and vulnerable test fix
 paths = [
   '''^docs/cookbook-failure-readiness\.md$''',
   '''^docs/e2e-test-report\.md$''',
+  '''^docs/plans/cookbooks/17-security-scan\.md$''',
   '''^test/fixtures/apps/vulnerable_security_app/app/services/legacy_exporter\.rb$''',
 ]

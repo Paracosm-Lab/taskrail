@@ -1,6 +1,27 @@
 require "rails_helper"
 
 RSpec.describe "Personal access tokens", type: :request do
+  it "logs in through Devise and creates a token through the web UI session" do
+    user = create(:user, password: "correct-password", password_confirmation: "correct-password")
+
+    post user_session_path, params: {
+      user: {
+        email: user.email,
+        password: "correct-password"
+      }
+    }
+    expect(response).to redirect_to(root_path)
+
+    post "/personal_access_tokens", params: { personal_access_token: { name: "Automation", scopes: %w[read write] } }
+    expect(response).to redirect_to(personal_access_tokens_path)
+
+    follow_redirect!
+    expect(response.body).to include("trpat_")
+    token = user.personal_access_tokens.sole
+    expect(token.name).to eq("Automation")
+    expect(token.scopes).to eq(%w[read write])
+  end
+
   it "creates a token for the signed-in user and only shows it once" do
     user = create(:user)
     sign_in user
