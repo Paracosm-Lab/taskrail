@@ -61,7 +61,13 @@ COPY --from=build /rails /rails
 RUN groupadd --system --gid 1000 rails && \
     useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
     chown -R rails:rails db log tmp
+
 USER 1000:1000
+
+# Configure git for the rails user (codex needs this to clone/commit/push)
+RUN git config --global user.email "taskrail@paracosmlab.com" && \
+    git config --global user.name "TaskRail" && \
+    git config --global credential.helper '!f() { echo username=x-access-token; echo password=$GH_TOKEN; }; f'
 
 # Entrypoint prepares the database.
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]

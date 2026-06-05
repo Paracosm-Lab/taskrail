@@ -47,6 +47,7 @@ stage_configs:
       args:
         - exec
         - --json
+        - --skip-git-repo-check
       output_artifact_kind: branch
       branch_prefix: postrunner/
 
