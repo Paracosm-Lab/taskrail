@@ -1,4 +1,4 @@
 #!/bin/sh
 set -e
 
-kamal app exec --reuse "bin/rails db:seed"
+kamal app exec --reuse --primary "bin/rails db:seed"
