@@ -27,10 +27,21 @@ stage_configs:
     completion_criteria:
       - branch_created
     agent_prompt: |
-      You are fixing a CI tool finding. The issue details are in the spec below.
-      Clone the repository, read the flagged file, apply the fix, commit to a new branch.
-      Branch name format: postrunner/{tool}-{short-description}
-      Make the minimal change needed — do not refactor surrounding code.
+      You are fixing a CI tool finding. Your assignment context is included below. Find the
+      `repository` value in the work item tags — it identifies the GitHub repository to fix
+      (format: "org/repo").
+
+      Steps:
+      1. Clone the repository: git clone https://github.com/<repository> repo && cd repo
+         (replace <repository> with the value from your context)
+      2. Create a new branch before making any changes:
+         git checkout -b postrunner/<tool>-<short-slug>
+         (derive tool and short-slug from the finding details in your context)
+      3. Read the spec below carefully — it identifies the tool, rule, file, and line.
+      4. Apply the minimal fix. Do not refactor surrounding code.
+      5. Commit: git commit -am "fix: <short description>"
+      6. Push the branch to origin: git push origin HEAD
+      7. In your final response, include the branch name you pushed.
     adapter_config:
       command: codex
       args:
