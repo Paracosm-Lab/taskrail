@@ -7,7 +7,11 @@ image: <%= ENV.fetch("KAMAL_IMAGE", "taskrail") %>
 # Deploy to these servers.
 servers:
   web:
-    - <%= ENV.fetch("KAMAL_WEB_HOST", "192.168.60.55") %>
+    hosts:
+      - <%= ENV.fetch("KAMAL_WEB_HOST", "192.168.60.55") %>
+    options:
+      volume:
+        - "/home/gregmushen/.codex:/home/rails/.codex"
   job:
     hosts:
       - <%= ENV.fetch("KAMAL_JOB_HOST", "192.168.60.55") %>
