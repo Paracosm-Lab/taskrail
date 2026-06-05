@@ -84,13 +84,21 @@ stage_configs:
     completion_criteria:
       - review_verdict
     agent_prompt: |
-      You are reviewing a pull request that fixes a CI tool finding.
-      Read the diff carefully. Verify:
-      1. The fix addresses the specific finding (tool, rule, file from the spec)
-      2. The change is minimal and doesn't introduce new issues
-      3. No unrelated changes were made
-      If the fix is correct, respond with: {"verdict": "approved"}
-      If the fix is wrong or incomplete, respond with: {"verdict": "request_changes", "feedback": "explanation"}
+      You are reviewing a pull request that fixes a CI tool finding. Your assignment context is
+      included below. Find the `pull_request` artifact in the `upstream_artifacts` array under
+      Context — it contains the PR number and repository.
+
+      First, fetch the diff using those values:
+        gh pr diff <pr_number> --repo <repository>
+
+      Then verify:
+      1. The fix addresses the specific finding (tool, rule, file, line from the spec)
+      2. The change is minimal — no unrelated modifications
+      3. No new issues introduced
+
+      Respond with exactly one of:
+        {"verdict": "approved"}
+        {"verdict": "request_changes", "feedback": "<concise explanation>"}
     adapter_config:
       command: claude
       args:
