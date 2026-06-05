@@ -190,7 +190,7 @@ With:
       7. In your final response, include the branch name you pushed.
 ```
 
-- [ ] **Step 4: Run the spec to confirm it passes (partially)**
+- [ ] **Step 3: Run the spec to confirm it passes (partially)**
 
 ```bash
 bundle exec rspec spec/models/work_queue_seed_spec.rb -e "postrunner-fix" --format documentation
@@ -198,7 +198,7 @@ bundle exec rspec spec/models/work_queue_seed_spec.rb -e "postrunner-fix" --form
 
 Expected: PASS on all `fix` prompt assertions. The `review` prompt assertions (`upstream_artifacts`, `gh pr diff`) will still fail — that's correct, Task 3 handles those.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add config/queues/postrunner_fix.yml spec/models/work_queue_seed_spec.rb
