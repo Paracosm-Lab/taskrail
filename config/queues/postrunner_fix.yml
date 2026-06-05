@@ -96,3 +96,10 @@ stage_configs:
     adapter_config:
       strategy: squash
       delete_branch: true
+
+  done:
+    adapter_type: fake
+    max_retries: 0
+    escalation_target: block_and_notify
+    allowed_skills: []
+    forbidden_skills: []
