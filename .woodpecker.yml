@@ -39,7 +39,6 @@ steps:
     when:
       event: [push, pull_request, manual]
 
-  # Type checking: not yet configured. Add Sorbet or Steep when warranted.
   security_scan:
     image: ruby:3.2.0
     commands:

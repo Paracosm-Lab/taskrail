@@ -9,6 +9,7 @@ class Pipe < ApplicationRecord
   scope :active, -> { where(enabled: true) }
   validate :to_stage_exists_in_queue
   validate :no_backward_same_queue_loop
+  validate :no_cross_queue_cycle
 
   private
 
@@ -38,5 +39,29 @@ class Pipe < ApplicationRecord
     # to_index <= from_index is invalid (same or earlier stage)
 
     errors.add(:to_stage, "must come after from_stage in the stage sequence for same-queue pipes")
+  end
+
+  def no_cross_queue_cycle
+    return unless from_queue && to_queue
+    return if from_queue.id == to_queue.id # covered by no_backward_same_queue_loop
+
+    # BFS from to_queue through existing pipes. If we can reach from_queue,
+    # adding this pipe would create a cross-queue cycle.
+    visited = Set.new
+    frontier = [to_queue.id]
+
+    until frontier.empty?
+      current_id = frontier.shift
+      next if visited.include?(current_id)
+      visited.add(current_id)
+
+      if current_id == from_queue.id
+        errors.add(:to_queue, "creates a circular dependency between queues")
+        return
+      end
+
+      next_ids = Pipe.where(from_queue_id: current_id).where.not(id: id).pluck(:to_queue_id).uniq
+      frontier.concat(next_ids - visited.to_a)
+    end
   end
 end

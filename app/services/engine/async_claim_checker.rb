@@ -1,5 +1,8 @@
 module Engine
   class AsyncClaimChecker
+    BASE_BACKOFF_SECONDS = 10
+    MAX_BACKOFF_SECONDS = 300
+
     def call
       Claim.active.where(async_execution: true).in_batches do |batch|
         Claim.transaction do
@@ -14,6 +17,7 @@ module Engine
       # Re-check after acquiring the lock: another worker may have completed this claim
       # between the in_batches pluck and the FOR UPDATE SKIP LOCKED re-query.
       return unless claim.active? && claim.async_execution?
+      return if in_backoff_window?(claim)
 
       if claim.heartbeat_stale?
         claim.update!(
@@ -58,6 +62,28 @@ module Engine
       Engine::TransitionManager.new(work_item: claim.work_item, claim: claim, stage_config: stage_config).call
     rescue StandardError => e
       Rails.logger.error("AsyncClaimChecker failed for Claim##{claim.id}: #{e.class}: #{e.message}")
+      record_poll_failure(claim, e)
+    end
+
+    def in_backoff_window?(claim)
+      backoff_until = claim.metadata["async_poll_backoff_until"]
+      return false unless backoff_until
+
+      Time.iso8601(backoff_until) > Time.current
+    rescue ArgumentError
+      false
+    end
+
+    def record_poll_failure(claim, _error)
+      failures = claim.metadata.fetch("async_poll_failures", 0) + 1
+      backoff_seconds = [BASE_BACKOFF_SECONDS * (2**(failures - 1)), MAX_BACKOFF_SECONDS].min
+      jitter = rand(0..(backoff_seconds / 2))
+      claim.update!(
+        metadata: claim.metadata.merge(
+          "async_poll_failures" => failures,
+          "async_poll_backoff_until" => (Time.current + backoff_seconds + jitter).iso8601
+        )
+      )
     end
   end
 end

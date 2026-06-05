@@ -115,7 +115,7 @@ RSpec.describe Adapters::ShellScriptAdapter do
     expect(commands.map { |command| command["stdout"].strip }).to eq(%w[1 2 3])
   end
 
-  it "returns failure when a command times out" do
+  it "returns timeout when a command times out" do
     result = described_class.new.execute(
       stage: {
         name: "test",
@@ -127,7 +127,7 @@ RSpec.describe Adapters::ShellScriptAdapter do
       limits: { timeout_seconds: 1 }
     )
 
-    expect(result.status).to eq("failure")
+    expect(result.status).to eq("timeout")
     expect(result.report.dig("commands", 0, "stderr")).to include("timed out")
   end
 

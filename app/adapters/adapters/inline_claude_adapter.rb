@@ -30,6 +30,12 @@ module Adapters
           artifacts: [success_artifact(normalized_assignment, runner_result, config)],
           trace_events: trace_events
         )
+      elsif runner_result.exit_status == ClaudeCliRunner::TIMEOUT_EXIT_STATUS
+        AgentResult.timeout(
+          report: failure_report(runner_result),
+          artifacts: [],
+          trace_events: trace_events
+        )
       else
         AgentResult.failure(
           report: failure_report(runner_result),

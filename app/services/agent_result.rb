@@ -19,6 +19,15 @@ class AgentResult
     )
   end
 
+  def self.timeout(report:, artifacts: [], trace_events: [])
+    new(
+      status: "timeout",
+      report: report,
+      artifacts: artifacts,
+      trace_events: trace_events
+    )
+  end
+
   def self.blocked(question:, report: {}, artifacts: [], trace_events: [])
     new(
       status: "blocked",
