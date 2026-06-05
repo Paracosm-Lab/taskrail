@@ -80,6 +80,10 @@ aliases:
 # Configure the image builder.
 builder:
   arch: amd64
+  buildkit_config: |
+    [registry."192.168.60.55:5000"]
+      http = true
+      insecure = true
 
   # # Build image via remote server (useful for faster amd64 builds on arm64 computers)
   # remote: ssh://docker@docker-builder-server
