@@ -8,6 +8,7 @@ stages:
   - await_ci
   - review
   - merge
+  - done
 
 config:
   default_max_retries: 2
@@ -24,7 +25,7 @@ stage_configs:
     allowed_skills: []
     forbidden_skills: []
     completion_criteria:
-      - code_changes_present
+      - branch_created
     agent_prompt: |
       You are fixing a CI tool finding. The issue details are in the spec below.
       Clone the repository, read the flagged file, apply the fix, commit to a new branch.
@@ -69,7 +70,7 @@ stage_configs:
     allowed_skills: []
     forbidden_skills: []
     completion_criteria:
-      - review_verdict_present
+      - review_verdict
     agent_prompt: |
       You are reviewing a pull request that fixes a CI tool finding.
       Read the diff carefully. Verify:
