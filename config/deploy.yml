@@ -32,7 +32,7 @@ proxy:
 registry:
   # Specify the registry server, if you're not using Docker Hub
   # server: registry.digitalocean.com / ghcr.io / ...
-  server: <%= ENV.fetch("KAMAL_REGISTRY_SERVER", "http://192.168.60.55:5000") %>
+  server: <%= ENV.fetch("KAMAL_REGISTRY_SERVER", "192.168.60.55:5000") %>
   username: <%= ENV.fetch("KAMAL_REGISTRY_USERNAME", "taskrail") %>
 
   # Always use an access token rather than real password when possible.
