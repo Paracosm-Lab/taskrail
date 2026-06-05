@@ -3,7 +3,7 @@
 ## Goal
 
 Close the remaining gaps between the shipped `postrunner-fix` queue infrastructure (PR #22) and a
-runnable end-to-end pipeline. Four targeted changes — no new adapters or services.
+runnable end-to-end pipeline. Five targeted changes — no new adapters or services.
 
 ## Scope
 
@@ -51,27 +51,54 @@ Two env vars needed in production:
 | `GH_TOKEN` | Authenticates `gh` CLI calls from `github_pr_create`, `github_ci_poll`, `github_pr_merge` |
 | `LINEAR_API_KEY` | Authenticates `LinearPollJob` GraphQL requests to Linear |
 
-Add both to `config/deploy.yml` (env section) and `.kamal/secrets` (fetched from the secret store).
+Add to `config/deploy.yml` `env.secret` list:
+
+```yaml
+env:
+  secret:
+    - RAILS_MASTER_KEY
+    - TASKRAIL_DATABASE_PASSWORD
+    - TASKRAIL_SERVICE_TOKEN
+    - TASKRAIL_ADMIN_TOKEN
+    - GITHUB_WEBHOOK_SECRET
+    - GH_TOKEN        # ← add
+    - LINEAR_API_KEY  # ← add
+```
+
+Add to `.kamal/secrets` (pull from ENV, same pattern as existing secrets):
+
+```
+GH_TOKEN=$GH_TOKEN
+LINEAR_API_KEY=$LINEAR_API_KEY
+```
+
+Note: `.kamal/secrets` is also missing three entries that are already declared in `config/deploy.yml`
+but not yet filled in: `TASKRAIL_SERVICE_TOKEN`, `TASKRAIL_ADMIN_TOKEN`, `GITHUB_WEBHOOK_SECRET`.
+These must be added at the same time.
 
 ### 3. Fix stage prompt
 
 The current prompt tells codex to clone and commit but does not tell it to push. `github_pr_create`
 runs `gh pr create --head <branch>` which requires the branch to exist on the remote.
 
-The updated prompt also makes the clone URL explicit using the `repository` tag:
+The updated prompt instructs codex to find the repository from its assignment context (the assignment
+JSON is included in the prompt by `CodexAdapter`; prompts are passed as-is without interpolation):
 
 ```
-You are fixing a CI tool finding in the repository: https://github.com/{{ tags.repository }}
+You are fixing a CI tool finding. Your assignment context is included below. Find the `repository`
+value in the work item tags — it identifies the GitHub repository to fix (format: "org/repo").
 
 Steps:
-1. Clone the repository: git clone https://github.com/{{ tags.repository }} repo && cd repo
-2. Read the spec below carefully — it identifies the tool, rule, file, and line.
-3. Apply the minimal fix. Do not refactor surrounding code.
-4. Commit: git commit -am "fix: <short description>"
-5. Push the branch to origin: git push origin HEAD
-6. In your final response, include the branch name you pushed.
-
-Branch name format: postrunner/{tool}-{short-slug}
+1. Clone the repository: git clone https://github.com/<repository> repo && cd repo
+   (replace <repository> with the value from your context)
+2. Create a new branch before making any changes:
+   git checkout -b postrunner/<tool>-<short-slug>
+   (derive tool and short-slug from the finding details in your context)
+3. Read the spec below carefully — it identifies the tool, rule, file, and line.
+4. Apply the minimal fix. Do not refactor surrounding code.
+5. Commit: git commit -am "fix: <short description>"
+6. Push the branch to origin: git push origin HEAD
+7. In your final response, include the branch name you pushed.
 ```
 
 The `sync_artifacts` method in `CodexAdapter` extracts the branch name from the final response via
@@ -83,13 +110,16 @@ The `sync_artifacts` method in `CodexAdapter` extracts the branch name from the 
 to fetch the diff before evaluating. The PR number and repository are available in the assignment
 context via `upstream_artifacts` (the `pull_request` artifact from the `open_pr` stage).
 
-Updated prompt:
+Prompts are passed as-is without interpolation, so the updated prompt instructs Claude to locate
+the PR number and repository from its assignment context (which includes `upstream_artifacts`):
 
 ```
-You are reviewing a pull request that fixes a CI tool finding.
+You are reviewing a pull request that fixes a CI tool finding. Your assignment context is included
+below. Find the `pull_request` artifact in the `upstream_artifacts` array under Context — it
+contains the PR number and repository.
 
-First, fetch the diff:
-  gh pr diff {{ upstream_artifacts.pull_request.number }} --repo {{ work_item.tags.repository }}
+First, fetch the diff using those values:
+  gh pr diff <pr_number> --repo <repository>
 
 Then verify:
 1. The fix addresses the specific finding (tool, rule, file, line from the spec)
@@ -106,19 +136,22 @@ Respond with exactly one of:
 Two items to confirm/add:
 
 **`rails db:seed` on deploy** — the `postrunner-fix` queue and its stage configs are created by
-`db/seeds.rb`, not migrations. The Kamal deploy must run `db:seed` after `db:migrate`. Add a
-`post_deploy` hook if missing:
+`db/seeds.rb`, not migrations. Seeds do not run automatically on deploy (only `db:prepare` runs
+via `bin/docker-entrypoint`, which handles migrations but not seeds). Add a Kamal post-deploy hook
+to run seeds inside the container after each deploy.
 
-```yaml
-# config/deploy.yml
-hooks:
-  post_deploy:
-    - bundle exec rails db:seed
+In Kamal 2, hooks are executable files in `.kamal/hooks/`, not keys in `config/deploy.yml`.
+Create `.kamal/hooks/post-deploy` (executable) on the deploy machine:
+
+```sh
+#!/bin/sh
+kamal app exec --reuse "bin/rails db:seed"
 ```
 
 **Solid Queue dispatcher** — `LinearPollJob` is a recurring job in `config/recurring.yml`. Solid
-Queue's dispatcher process must be running in production for the schedule to fire. Confirm
-`config/solid_queue.yml` includes a dispatcher and that the Kamal deploy starts it.
+Queue's dispatcher process must be running in production for the schedule to fire. `config/queue.yml`
+already includes a `dispatchers:` block at the `default` anchor that is inherited by all environments,
+so no change is needed — just confirm the Kamal deploy starts the Solid Queue worker process.
 
 ## Testing
 
