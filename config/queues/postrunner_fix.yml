@@ -48,6 +48,7 @@ stage_configs:
         - exec
         - --json
         - --skip-git-repo-check
+        - --dangerously-bypass-approvals-and-sandbox
       output_artifact_kind: branch
       branch_prefix: postrunner/
 
