@@ -57,6 +57,25 @@ RSpec.describe LinearPollJob, type: :job do
     expect { described_class.perform_now }.not_to change(WorkItem, :count)
   end
 
+  it "maps voice-agent-service label to the correct repository" do
+    client = instance_double(LinearClient)
+    allow(LinearClient).to receive(:new).and_return(client)
+    allow(client).to receive(:postrunner_issues).and_return([
+      {
+        "id" => "linear-uuid-3", "identifier" => "ENG-175",
+        "title" => "[bandit] B601 in voice_agent/handler.py",
+        "description" => "## Finding\n...",
+        "labels" => { "nodes" => [{ "name" => "postrunner" }, { "name" => "voice-agent-service" }] }
+      }
+    ])
+
+    expect { described_class.perform_now }.to change(WorkItem, :count).by(1)
+
+    item = WorkItem.last
+    expect(item.tags["repository"]).to eq("MyScribbl/voice-agent-service")
+    expect(item.tags["service_name"]).to eq("voice-agent-service")
+  end
+
   it "skips issues with postrunner-ignore label" do
     client = instance_double(LinearClient)
     allow(LinearClient).to receive(:new).and_return(client)
