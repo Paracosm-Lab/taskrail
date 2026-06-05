@@ -64,6 +64,7 @@ stage_configs:
 
   review:
     adapter_type: inline_claude
+    model_override: claude-opus-4-6
     max_retries: 0
     timeout_seconds: 120
     escalation_target: block_and_notify
@@ -83,7 +84,6 @@ stage_configs:
       command: claude
       args:
         - --print
-      model: claude-opus-4-6
       output_artifact_kind: review_report
 
   merge:
