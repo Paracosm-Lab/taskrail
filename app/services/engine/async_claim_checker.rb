@@ -25,7 +25,21 @@ module Engine
         return
       end
 
-      return unless claim.assignment.dig("async", "provider") == "codex"
+      provider = claim.assignment.dig("async", "provider")
+
+      if provider == "github_ci_poll"
+        adapter = Adapters::GithubCiPollAdapter.new
+        poll_result = adapter.check_status(claim)
+        return if poll_result == :running
+
+        stage_config = claim.work_item.work_queue.stage_configs.find_by!(stage_name: claim.work_item.stage_name)
+        Engine::ClaimResultPersister.new(claim: claim, stage_config: stage_config).call(poll_result)
+        claim.update!(status: :completed, async_execution: false, completed_at: Time.current)
+        Engine::TransitionManager.new(work_item: claim.work_item, claim: claim, stage_config: stage_config).call
+        return
+      end
+
+      return unless provider == "codex"
 
       stage_config = claim.work_item.work_queue.stage_configs.find_by!(stage_name: claim.work_item.stage_name)
       poll_result = CodexCliPoller.new(
