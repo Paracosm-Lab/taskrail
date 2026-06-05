@@ -37,7 +37,7 @@ module Adapters
     def extract_branch(assignment)
       artifacts = assignment.dig("context", "upstream_artifacts") || []
       branch_artifact = artifacts.find { |a| a["kind"] == "branch" }
-      branch_artifact&.dig("data", "branch") || "unknown-branch"
+      branch_artifact&.dig("data", "name") || branch_artifact&.dig("data", "branch") || "unknown-branch"
     end
 
     def build_title(config, assignment)
