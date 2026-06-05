@@ -6,12 +6,13 @@ class ClaudeCliRunner
 
   Result = Data.define(:stdout, :stderr, :exit_status, :duration_ms)
 
-  def initialize(command:, args: [], prompt:, working_directory: Rails.root.to_s, timeout_seconds: nil)
+  def initialize(command:, args: [], prompt:, working_directory: Rails.root.to_s, timeout_seconds: nil, model: nil)
     @command = command
     @args = args
     @prompt = prompt
     @working_directory = working_directory
     @timeout_seconds = timeout_seconds
+    @model = model
   end
 
   def call
@@ -30,7 +31,9 @@ class ClaudeCliRunner
   private
 
   def capture_process
-    Open3.popen3(@command, *@args, chdir: @working_directory) do |stdin, stdout, stderr, wait_thread|
+    cmd_args = @args.dup
+    cmd_args.unshift("--model", @model) if @model
+    Open3.popen3(@command, *cmd_args, chdir: @working_directory) do |stdin, stdout, stderr, wait_thread|
       stdin.write(@prompt)
       stdin.close
 
