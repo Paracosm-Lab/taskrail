@@ -62,8 +62,8 @@ env:
 
     POSTGRES_HOST: 192.168.1.76
     POSTGRES_PORT: 55432
-    POSTGRES_DB: <%= ENV.fetch("POSTGRES_DB") %>
-    POSTGRES_USER: <%= ENV.fetch("POSTGRES_USER") %>
+    POSTGRES_DB: taskrail
+    POSTGRES_USER: taskrail
 
     # Log everything from Rails
     # RAILS_LOG_LEVEL: debug
