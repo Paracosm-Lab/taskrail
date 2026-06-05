@@ -24,6 +24,7 @@ RSpec.describe "actual seeded cookbook jobs", type: :request do
     CookbookJob.new(slug: "migration_safety", spec_path: "docs/specs/cookbook-14-migration-safety.md"),
     CookbookJob.new(slug: "operations", spec_path: "docs/cookbooks/failure-readiness.md"),
     CookbookJob.new(slug: "post_incident_replay", spec_path: "docs/specs/cookbook-19-post-incident-replay.md"),
+    CookbookJob.new(slug: "postrunner-fix", spec_path: "docs/specs/2026-06-04-github-linear-adapters-design.md"),
     CookbookJob.new(slug: "pr_review", spec_path: "docs/specs/cookbook-15-pr-review-pipeline.md"),
     CookbookJob.new(slug: "query_health", spec_path: "docs/specs/cookbook-07-database-query-health.md"),
     CookbookJob.new(slug: "security_scan", spec_path: "docs/specs/cookbook-17-security-scan.md"),

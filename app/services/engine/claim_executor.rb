@@ -7,7 +7,10 @@ module Engine
       "shell_script" => Adapters::ShellScriptAdapter,
       "inline_claude" => Adapters::InlineClaudeAdapter,
       "codex" => Adapters::CodexAdapter,
-      "docker_compose" => Adapters::DockerComposeAdapter
+      "docker_compose" => Adapters::DockerComposeAdapter,
+      "github_pr_create" => Adapters::GithubPrCreateAdapter,
+      "github_ci_poll" => Adapters::GithubCiPollAdapter,
+      "github_pr_merge" => Adapters::GithubPrMergeAdapter
     }.freeze
 
     def initialize(claim:, stage_config:)

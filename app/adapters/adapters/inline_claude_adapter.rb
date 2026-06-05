@@ -18,7 +18,8 @@ module Adapters
         args: config.fetch("args", DEFAULT_ARGS),
         prompt: prompt,
         working_directory: config.fetch("working_directory", DEFAULT_WORKING_DIRECTORY),
-        timeout_seconds: normalized_assignment.dig("limits", "timeout_seconds")
+        timeout_seconds: normalized_assignment.dig("limits", "timeout_seconds"),
+        model: normalized_assignment["model"]
       ).call
 
       trace_events = [trace_event(prompt, runner_result, command)]

@@ -96,6 +96,10 @@ module Adapters
       when "diff_environments" then diff_environments_result
       when "classify_drift" then classify_drift_result
       when "draft_sync_plan" then draft_sync_plan_result
+      when "fix" then fix_result(assignment)
+      when "open_pr" then open_pr_result
+      when "await_ci" then await_ci_result
+      when "merge" then merge_result
       else
         generic_result(stage_name)
       end
@@ -805,6 +809,39 @@ module Adapters
         report: { "summary" => "drafted sync plan" },
         artifacts: [{ "kind" => "sync_plan", "data" => { "actions" => [{ "environment" => "staging", "key" => "database_pool", "from" => 2, "to" => 5, "command" => "set DATABASE_POOL=5" }] } }],
         trace_events: [trace_event("drafted sync plan")]
+      )
+    end
+
+    def fix_result(assignment)
+      id = assignment.dig(:work_item, :id) || SecureRandom.hex(4)
+      AgentResult.success(
+        report: { "summary" => "applied fix and committed to branch" },
+        artifacts: [{ "kind" => "branch", "data" => { "name" => "postrunner/fix-#{id}", "branch" => "postrunner/fix-#{id}" } }],
+        trace_events: [trace_event("applied postrunner fix")]
+      )
+    end
+
+    def open_pr_result
+      AgentResult.success(
+        report: { "summary" => "opened pull request" },
+        artifacts: [{ "kind" => "pull_request", "data" => { "number" => 1, "url" => "https://github.com/fake/repo/pull/1", "branch" => "postrunner/fix-fake", "base_branch" => "main" } }],
+        trace_events: [trace_event("opened fake pull request")]
+      )
+    end
+
+    def await_ci_result
+      AgentResult.success(
+        report: { "summary" => "CI passed" },
+        artifacts: [{ "kind" => "ci_result", "data" => { "status" => "success", "checks" => [], "pr_number" => 1 } }],
+        trace_events: [trace_event("CI checks passed")]
+      )
+    end
+
+    def merge_result
+      AgentResult.success(
+        report: { "summary" => "merged pull request" },
+        artifacts: [{ "kind" => "merge_result", "data" => { "pr_number" => 1, "strategy" => "squash", "merged" => true } }],
+        trace_events: [trace_event("merged fake pull request")]
       )
     end
 

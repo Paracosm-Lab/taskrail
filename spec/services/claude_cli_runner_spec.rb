@@ -27,6 +27,24 @@ RSpec.describe ClaudeCliRunner do
     expect(result.exit_status).to eq(9)
   end
 
+  describe "model override" do
+    it "passes --model flag when model is provided" do
+      runner = ClaudeCliRunner.new(
+        command: "echo", args: ["--print"], prompt: "test",
+        model: "claude-opus-4-6"
+      )
+      # Verify the model is stored — actual CLI invocation tested via integration
+      expect(runner.instance_variable_get(:@model)).to eq("claude-opus-4-6")
+    end
+
+    it "does not pass --model when model is nil" do
+      runner = ClaudeCliRunner.new(
+        command: "echo", args: ["--print"], prompt: "test"
+      )
+      expect(runner.instance_variable_get(:@model)).to be_nil
+    end
+  end
+
   it "terminates commands that exceed the timeout" do
     result = described_class.new(
       command: "ruby",

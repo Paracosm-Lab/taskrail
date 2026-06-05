@@ -1,0 +1,105 @@
+name: "Postrunner Fix"
+category: "Maintenance"
+slug: "postrunner-fix"
+
+stages:
+  - fix
+  - open_pr
+  - await_ci
+  - review
+  - merge
+  - done
+
+config:
+  default_max_retries: 2
+  default_timeout_seconds: 600
+  default_escalation: block_and_notify
+  max_regression_loops: 2
+
+stage_configs:
+  fix:
+    adapter_type: codex
+    max_retries: 2
+    timeout_seconds: 300
+    escalation_target: block_and_notify
+    allowed_skills: []
+    forbidden_skills: []
+    completion_criteria:
+      - branch_created
+    agent_prompt: |
+      You are fixing a CI tool finding. The issue details are in the spec below.
+      Clone the repository, read the flagged file, apply the fix, commit to a new branch.
+      Branch name format: postrunner/{tool}-{short-description}
+      Make the minimal change needed — do not refactor surrounding code.
+    adapter_config:
+      command: codex
+      args:
+        - exec
+        - --json
+      output_artifact_kind: branch
+      branch_prefix: postrunner/
+
+  open_pr:
+    adapter_type: github_pr_create
+    max_retries: 1
+    timeout_seconds: 30
+    escalation_target: block_and_notify
+    allowed_skills: []
+    forbidden_skills: []
+    adapter_config:
+      base_branch: main
+      draft: false
+      title_template: "fix: {work_item_title}"
+
+  await_ci:
+    adapter_type: github_ci_poll
+    max_retries: 0
+    timeout_seconds: 900
+    escalation_target: block_and_notify
+    allowed_skills: []
+    forbidden_skills: []
+    adapter_config:
+      poll_interval_seconds: 30
+      timeout_seconds: 900
+
+  review:
+    adapter_type: inline_claude
+    max_retries: 0
+    timeout_seconds: 120
+    escalation_target: block_and_notify
+    allowed_skills: []
+    forbidden_skills: []
+    completion_criteria:
+      - review_verdict
+    agent_prompt: |
+      You are reviewing a pull request that fixes a CI tool finding.
+      Read the diff carefully. Verify:
+      1. The fix addresses the specific finding (tool, rule, file from the spec)
+      2. The change is minimal and doesn't introduce new issues
+      3. No unrelated changes were made
+      If the fix is correct, respond with: {"verdict": "approved"}
+      If the fix is wrong or incomplete, respond with: {"verdict": "request_changes", "feedback": "explanation"}
+    adapter_config:
+      command: claude
+      args:
+        - --print
+      model: claude-opus-4-6
+      output_artifact_kind: review_report
+
+  merge:
+    adapter_type: github_pr_merge
+    max_retries: 1
+    timeout_seconds: 30
+    escalation_target: block_and_notify
+    allowed_skills: []
+    forbidden_skills: []
+    adapter_config:
+      strategy: squash
+      delete_branch: true
+
+  done:
+    adapter_type: fake
+    max_retries: 0
+    escalation_target: block_and_notify
+    allowed_skills: []
+    forbidden_skills: []
