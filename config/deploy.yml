@@ -2,7 +2,7 @@
 service: taskrail
 
 # Name of the container image.
-image: <%= ENV.fetch("KAMAL_IMAGE", "192.168.60.55:5000/taskrail") %>
+image: <%= ENV.fetch("KAMAL_IMAGE", "taskrail") %>
 
 # Deploy to these servers.
 servers:
