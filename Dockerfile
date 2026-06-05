@@ -14,10 +14,14 @@ FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
 # Rails app lives here
 WORKDIR /rails
 
-# Install base packages + Node.js (needed for codex and claude-code agents)
+# Install base packages + Node.js (needed for codex and claude-code agents) + gh CLI
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y curl libjemalloc2 postgresql-client nodejs npm git && \
     npm install -g @openai/codex @anthropic-ai/claude-code && \
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
+    apt-get update -qq && apt-get install --no-install-recommends -y gh && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set production environment
