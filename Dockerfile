@@ -14,9 +14,10 @@ FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
 # Rails app lives here
 WORKDIR /rails
 
-# Install base packages
+# Install base packages + Node.js (needed for codex and claude-code agents)
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 postgresql-client && \
+    apt-get install --no-install-recommends -y curl libjemalloc2 postgresql-client nodejs npm git && \
+    npm install -g @openai/codex @anthropic-ai/claude-code && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set production environment
