@@ -1,7 +1,9 @@
 module TraceRedactor
-  SENSITIVE_KEY_PATTERN = /prompt|assignment|x-api-key|api[_-]?key|apikey|aws_secret_access_key|aws_session_token|secret|password|passwd|token|authorization|credential|private[_-]?key|signing[_-]?key|session/i
+  SENSITIVE_KEY_PATTERN = /prompt|assignment|x-api-key|api[_-]?key|apikey|aws_access_key|aws_secret_access_key|aws_session_token|secret|password|passwd|token|authorization|credential|private[_-]?key|signing[_-]?key|session/i
   BEARER_PATTERN = /\b(Bearer)\s+["']?[^"'\s,;&]+["']?/i
-  KEY_VALUE_PATTERN = /\b(x-api-key|api[_-]?key|apikey|aws_secret_access_key|aws_session_token|secret|password|passwd|token|credential|private[_-]?key|signing[_-]?key|session)\b(\s*[:=]\s*)("[^"]+"|'[^']+'|[^\s,;&]+)/i
+  # AWS access key IDs start with AKIA, AROA, ASIA, etc. followed by 16+ uppercase alphanumerics
+  AWS_KEY_ID_PATTERN = /\b(AKIA|AROA|ASIA|ABIA|ACCA)[A-Z0-9]{16,}\b/
+  KEY_VALUE_PATTERN = /\b(x-api-key|api[_-]?key|apikey|aws_access_key|aws_secret_access_key|aws_session_token|secret|password|passwd|token|credential|private[_-]?key|signing[_-]?key|session)\b(\s*[:=]\s*)("[^"]+"|'[^']+'|[^\s,;&]+)/i
 
   module_function
 
@@ -15,6 +17,7 @@ module TraceRedactor
 
     redacted = value.gsub(BEARER_PATTERN, "\\1 [REDACTED]")
     redacted = redacted.gsub(KEY_VALUE_PATTERN) { "#{$1}#{$2}[REDACTED]" }
+    redacted = redacted.gsub(AWS_KEY_ID_PATTERN, "[REDACTED]")
     return redacted unless redacted == value
 
     value.match?(SENSITIVE_KEY_PATTERN) ? "[REDACTED]" : value

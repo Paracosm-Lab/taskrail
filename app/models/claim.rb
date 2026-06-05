@@ -7,6 +7,9 @@ class Claim < ApplicationRecord
 
   enum :status, { active: 0, completed: 1, failed: 2, timed_out: 3 }
 
+  scope :pending_async, -> { active.where(async_execution: true) }
+  scope :stale, -> { active.where(async_execution: true).select(&:heartbeat_stale?) }
+
   HEARTBEAT_STALE_AFTER = 120.seconds
 
   validates :agent_type, presence: true
