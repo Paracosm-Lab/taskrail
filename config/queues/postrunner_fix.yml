@@ -82,8 +82,7 @@ stage_configs:
       timeout_seconds: 900
 
   review:
-    adapter_type: inline_claude
-    model_override: claude-opus-4-6
+    adapter_type: codex
     max_retries: 0
     timeout_seconds: 120
     escalation_target: block_and_notify
@@ -104,13 +103,16 @@ stage_configs:
       2. The change is minimal — no unrelated modifications
       3. No new issues introduced
 
-      Respond with exactly one of:
+      In your FINAL response, output ONLY one of these JSON blocks:
         {"verdict": "approved"}
         {"verdict": "request_changes", "feedback": "<concise explanation>"}
     adapter_config:
-      command: claude
+      command: codex
       args:
-        - --print
+        - exec
+        - --json
+        - --skip-git-repo-check
+        - --dangerously-bypass-approvals-and-sandbox
       output_artifact_kind: review_report
 
   merge:
