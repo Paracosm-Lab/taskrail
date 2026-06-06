@@ -147,6 +147,7 @@ steps:
       dry_run: false
       dockerfile: Dockerfile
       insecure: true
+      output: type=image\,push=true\,registry.insecure=true\,rewrite-timestamp=true
       buildkit_config: |
         [registry."192.168.60.55:5000"]
           http = true
