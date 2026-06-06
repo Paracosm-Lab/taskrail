@@ -24,25 +24,32 @@ module Adapters
       repo = meta["repository"]
       pr = meta["pr_number"]
 
-      result = run_command(["gh", "pr", "checks", pr.to_s, "--repo", repo, "--json", "name,state,bucket"])
-      checks = JSON.parse(result.stdout) rescue []
+      # Get the PR's head SHA
+      sha_result = run_command(["gh", "pr", "view", pr.to_s, "--repo", repo, "--json", "headRefOid"])
+      head_sha = (JSON.parse(sha_result.stdout) rescue {})["headRefOid"]
+      return :running unless head_sha.present?
 
-      return :running if checks.empty?
-      pending = checks.any? { |c| !%w[SUCCESS FAILURE SKIPPED].include?(c["state"]) }
+      # Query workflow runs for this SHA via the REST API (works with Actions read PAT permission)
+      runs_result = run_command(["gh", "api", "repos/#{repo}/actions/runs?head_sha=#{head_sha}"])
+      runs = (JSON.parse(runs_result.stdout) rescue {}).fetch("workflow_runs", [])
+
+      return :running if runs.empty?
+
+      pending = runs.any? { |r| r["status"] != "completed" }
       return :running if pending
 
-      failed = checks.select { |c| c["bucket"] == "fail" }
+      failed = runs.select { |r| r["conclusion"] == "failure" }
       if failed.any?
         AgentResult.failure(
-          report: { "summary" => "CI failed: #{failed.map { |c| c['name'] }.join(', ')}", "checks" => checks },
-          artifacts: [{ "kind" => "ci_result", "data" => { "status" => "failure", "checks" => checks, "pr_number" => pr } }],
-          trace_events: [build_trace(["gh", "pr", "checks"], result)]
+          report: { "summary" => "CI failed: #{failed.map { |r| r['name'] }.join(', ')}", "runs" => runs },
+          artifacts: [{ "kind" => "ci_result", "data" => { "status" => "failure", "runs" => runs, "pr_number" => pr } }],
+          trace_events: [build_trace(["gh", "api", "actions/runs"], runs_result)]
         )
       else
         AgentResult.success(
-          report: { "summary" => "CI passed: #{checks.size} checks green", "checks" => checks },
-          artifacts: [{ "kind" => "ci_result", "data" => { "status" => "success", "checks" => checks, "pr_number" => pr } }],
-          trace_events: [build_trace(["gh", "pr", "checks"], result)]
+          report: { "summary" => "CI passed: #{runs.size} workflow runs green", "runs" => runs },
+          artifacts: [{ "kind" => "ci_result", "data" => { "status" => "success", "runs" => runs, "pr_number" => pr } }],
+          trace_events: [build_trace(["gh", "api", "actions/runs"], runs_result)]
         )
       end
     end
