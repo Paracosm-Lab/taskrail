@@ -21,3 +21,7 @@ production:
     class: EngineTickJob
     queue: default
     schedule: every minute
+  check_async_claims:
+    class: CheckAsyncClaimsJob
+    queue: default
+    schedule: every minute
