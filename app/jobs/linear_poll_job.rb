@@ -1,7 +1,7 @@
 class LinearPollJob < ApplicationJob
   queue_as :default
 
-  SERVICE_LABELS = %w[crm-service user-service chat-service memory-service enrichment-service notification-service voice-agent-service].freeze
+  SERVICE_LABELS = %w[crm-service user-service chat-service memory-service enrichment-service notification-service agent-service ops-service frontend-dashboard frontend-dashboard-native scribbl-infrastructure v0-scribbl-homepage scribbl-local-dev scribbl-scaffold].freeze
 
   def perform
     client = LinearClient.new(api_key: ENV.fetch("LINEAR_API_KEY", ""))
