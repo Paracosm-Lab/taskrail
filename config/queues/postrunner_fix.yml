@@ -31,8 +31,6 @@ stage_configs:
       args:
         - exec
         - --json
-        - --model
-        - gpt-5.3-codex-spark
         - --skip-git-repo-check
         - --dangerously-bypass-approvals-and-sandbox
       output_artifact_kind: branch
@@ -113,8 +111,6 @@ stage_configs:
       args:
         - exec
         - --json
-        - --model
-        - gpt-5.3-codex-spark
         - --skip-git-repo-check
         - --dangerously-bypass-approvals-and-sandbox
       output_artifact_kind: review_report
