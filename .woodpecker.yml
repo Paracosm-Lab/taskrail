@@ -126,7 +126,7 @@ steps:
     image: woodpeckerci/plugin-docker-buildx:latest-insecure
     settings:
       repo: 192.168.60.55:5000/taskrail
-      registry: 192.168.60.55:5000
+      registry: http://192.168.60.55:5000
       dry_run: true
       dockerfile: Dockerfile
       insecure: true
@@ -139,7 +139,7 @@ steps:
     image: woodpeckerci/plugin-docker-buildx:latest-insecure
     settings:
       repo: 192.168.60.55:5000/taskrail
-      registry: 192.168.60.55:5000
+      registry: http://192.168.60.55:5000
       dry_run: false
       dockerfile: Dockerfile
       insecure: true
