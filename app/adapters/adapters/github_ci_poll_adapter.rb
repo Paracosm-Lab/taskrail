@@ -24,13 +24,14 @@ module Adapters
       repo = meta["repository"]
       pr = meta["pr_number"]
 
-      result = run_command(["gh", "pr", "checks", pr.to_s, "--repo", repo, "--json", "name,state,conclusion"])
+      result = run_command(["gh", "pr", "checks", pr.to_s, "--repo", repo, "--json", "name,state,bucket"])
       checks = JSON.parse(result.stdout) rescue []
 
-      pending = checks.any? { |c| c["state"] != "COMPLETED" }
+      return :running if checks.empty?
+      pending = checks.any? { |c| !%w[SUCCESS FAILURE SKIPPED].include?(c["state"]) }
       return :running if pending
 
-      failed = checks.select { |c| c["conclusion"] == "FAILURE" }
+      failed = checks.select { |c| c["bucket"] == "fail" }
       if failed.any?
         AgentResult.failure(
           report: { "summary" => "CI failed: #{failed.map { |c| c['name'] }.join(', ')}", "checks" => checks },
