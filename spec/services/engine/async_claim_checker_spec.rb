@@ -57,6 +57,28 @@ RSpec.describe Engine::AsyncClaimChecker do
     expect(claim.work_item.transition_logs.last.trigger).to eq("retry")
   end
 
+  it "marks a claim timed_out when it has exceeded the max async claim age" do
+    claim = build_async_claim(started_at: 2.hours.ago)
+    expect(CodexCliPoller).not_to receive(:new)
+
+    described_class.new.call
+
+    expect(claim.reload).to be_timed_out
+    expect(claim.async_execution).to eq(false)
+    expect(claim.completed_at).to be_present
+    expect(claim.metadata["error"]).to eq("async claim exceeded max age")
+  end
+
+  it "respects queue-level max_async_claim_age_seconds config" do
+    claim = build_async_claim(started_at: 10.minutes.ago, queue_config: { "max_async_claim_age_seconds" => 300 })
+    expect(CodexCliPoller).not_to receive(:new)
+
+    described_class.new.call
+
+    expect(claim.reload).to be_timed_out
+    expect(claim.metadata["error"]).to eq("async claim exceeded max age")
+  end
+
   it "skips a claim already completed when the lock is acquired (re-check guard)" do
     claim = build_async_claim
     # Simulate the TOCTOU race: the outer query fetched this claim as active,
@@ -74,8 +96,8 @@ RSpec.describe Engine::AsyncClaimChecker do
     expect(claim.reports.count).to eq(0)
   end
 
-  def build_async_claim
-    queue = WorkQueue.create!(name: "Codex", slug: "codex-#{SecureRandom.hex(4)}", stages: %w[build test])
+  def build_async_claim(started_at: 1.minute.ago, queue_config: {})
+    queue = WorkQueue.create!(name: "Codex", slug: "codex-#{SecureRandom.hex(4)}", stages: %w[build test], config: queue_config)
     StageConfig.create!(work_queue: queue, stage_name: "build", adapter_type: "codex", completion_criteria: ["branch_created"], adapter_config: { "poll_command" => "codex", "poll_args" => ["status", "--json"] })
     work_item = WorkItem.create!(work_queue: queue, title: "Build feature", spec_url: "opaque", stage_name: "build")
     Claim.create!(
@@ -83,7 +105,7 @@ RSpec.describe Engine::AsyncClaimChecker do
       agent_type: "codex",
       status: :active,
       async_execution: true,
-      started_at: 1.minute.ago,
+      started_at: started_at,
       assignment: {
         "stage" => { "name" => "build" },
         "model" => "codex-test",

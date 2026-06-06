@@ -19,6 +19,16 @@ module Engine
       return unless claim.active? && claim.async_execution?
       return if in_backoff_window?(claim)
 
+      if claim_age_exceeded?(claim)
+        claim.update!(
+          status: :timed_out,
+          async_execution: false,
+          completed_at: Time.current,
+          metadata: claim.metadata.merge("error" => "async claim exceeded max age")
+        )
+        return
+      end
+
       if claim.heartbeat_stale?
         claim.update!(
           status: :failed,
@@ -63,6 +73,16 @@ module Engine
     rescue StandardError => e
       Rails.logger.error("AsyncClaimChecker failed for Claim##{claim.id}: #{e.class}: #{e.message}")
       record_poll_failure(claim, e)
+    end
+
+    DEFAULT_MAX_ASYNC_CLAIM_AGE_SECONDS = 3600
+
+    def claim_age_exceeded?(claim)
+      return false unless claim.started_at.present?
+
+      max_age_seconds = claim.work_item&.work_queue&.config&.dig("max_async_claim_age_seconds") ||
+        DEFAULT_MAX_ASYNC_CLAIM_AGE_SECONDS
+      claim.started_at < max_age_seconds.seconds.ago
     end
 
     def in_backoff_window?(claim)
