@@ -123,22 +123,24 @@ steps:
       event: [push, manual]
 
   docker_build_pr:
-    image: woodpeckerci/plugin-docker-buildx
+    image: woodpeckerci/plugin-docker-buildx:latest-insecure
     settings:
       repo: 192.168.60.55:5000/taskrail
       dry_run: true
       dockerfile: Dockerfile
+      insecure: true
     depends_on:
       - test
     when:
       event: [pull_request]
 
   docker_build_main:
-    image: woodpeckerci/plugin-docker-buildx
+    image: woodpeckerci/plugin-docker-buildx:latest-insecure
     settings:
       repo: 192.168.60.55:5000/taskrail
       dry_run: false
       dockerfile: Dockerfile
+      insecure: true
       tags:
         - latest
         - ${CI_COMMIT_SHA}
