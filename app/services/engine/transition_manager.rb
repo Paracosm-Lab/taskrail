@@ -66,6 +66,7 @@ module Engine
 
         spawn_cross_queue_items!(from_stage: from_stage)
         PipeEvaluator.call(work_item: @work_item, from_stage: from_stage)
+        close_linear_issue if terminal
       end
     end
 
@@ -411,6 +412,17 @@ module Engine
 
     def pipe_depth(work_item)
       Engine::PipeDepth.for(work_item)
+    end
+
+    def close_linear_issue
+      issue_id = @work_item.tags["linear_issue_id"]
+      return unless issue_id.present?
+
+      client = LinearClient.new(api_key: ENV.fetch("LINEAR_API_KEY", ""))
+      success = client.close_issue(issue_id)
+      Rails.logger.info("[TransitionManager] Linear issue #{issue_id} closed: #{success}")
+    rescue StandardError => e
+      Rails.logger.error("[TransitionManager] Failed to close Linear issue: #{e.message}")
     end
   end
 end
