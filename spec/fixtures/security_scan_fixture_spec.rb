@@ -23,7 +23,7 @@ RSpec.describe "security scan vulnerable fixture" do
     expect(service).to include("LEGACY_API_KEY")
 
     cors = fixture_root.join("config/initializers/cors.rb").read
-    expect(cors).to include("origins '*'")
+    expect(cors).to include('origins "*"')
 
     serialized_paths = fixture_root.glob("**/*").select(&:file?).map(&:read).join("\n")
     expect(serialized_paths).not_to include(Rails.root.to_s)

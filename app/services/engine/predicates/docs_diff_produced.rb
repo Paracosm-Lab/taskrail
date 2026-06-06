@@ -23,7 +23,7 @@ module Engine
       def artifact_from(report)
         return unless report&.body.is_a?(Hash)
         return report.body["docs_diff"] if report.body["docs_diff"].is_a?(Hash)
-        return report.body["artifact"] if report.body["artifact_kind"] == "docs_diff" && report.body["artifact"].is_a?(Hash)
+        report.body["artifact"] if report.body["artifact_kind"] == "docs_diff" && report.body["artifact"].is_a?(Hash)
       end
     end
   end

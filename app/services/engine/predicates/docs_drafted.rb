@@ -21,7 +21,7 @@ module Engine
       def artifact_from(report)
         return unless report&.body.is_a?(Hash)
         return report.body["draft_docs"] if report.body["draft_docs"].is_a?(Hash)
-        return report.body["artifact"] if report.body["artifact_kind"] == "draft_docs" && report.body["artifact"].is_a?(Hash)
+        report.body["artifact"] if report.body["artifact_kind"] == "draft_docs" && report.body["artifact"].is_a?(Hash)
       end
     end
   end

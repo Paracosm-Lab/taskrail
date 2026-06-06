@@ -26,6 +26,28 @@ stage_configs:
     forbidden_skills: []
     completion_criteria:
       - branch_created
+    agent_prompt: |
+      You are fixing a CI tool finding. Your assignment context is included below. Find the
+      `repository` value in the work item tags — it identifies the GitHub repository to fix
+      (format: "org/repo").
+
+      Steps:
+      1. Configure git to use the GitHub token for authentication (required for push):
+         git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+      2. Clone the repository into /tmp/fix-work: git clone https://github.com/<repository> /tmp/fix-work && cd /tmp/fix-work
+         (replace <repository> with the value from your context)
+      3. Create a new branch before making any changes:
+         git checkout -b postrunner/<tool>-<short-slug>
+         (derive tool and short-slug from the finding details in your context)
+      4. Read the spec below carefully — it identifies the tool, rule, file, and line.
+      5. Apply the minimal fix. Do not refactor surrounding code.
+      6. Commit: git commit -am "fix: <short description>"
+      7. Push the branch to origin: git push origin HEAD
+      8. In your FINAL response, output ONLY this JSON (fill in the branch name):
+
+      ```json
+      {"artifacts": [{"kind": "branch", "data": {"name": "<branch-name-you-pushed>"}}]}
+      ```
     adapter_config:
       command: codex
       args:

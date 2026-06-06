@@ -15,9 +15,9 @@ class LinearPollJob < ApplicationJob
 
       labels = issue.dig("labels", "nodes")&.map { |l| l["name"] } || []
       next if labels.include?("postrunner-ignore")
+      next if (labels & EXCLUDED_SERVICES).any?
 
       service = (labels & SERVICE_LABELS).first || "unknown-service"
-      next if EXCLUDED_SERVICES.include?(service)
 
       repo = "MyScribbl/#{service}"
       linear_url = "https://linear.app/myscribbl/issue/#{issue['identifier']}"

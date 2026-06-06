@@ -125,7 +125,7 @@ steps:
   docker_build_pr:
     image: woodpeckerci/plugin-docker-buildx
     settings:
-      repo: 192.168.1.76:5000/taskrail
+      repo: 192.168.60.55:5000/taskrail
       dry_run: true
       dockerfile: Dockerfile
     depends_on:
@@ -136,7 +136,7 @@ steps:
   docker_build_main:
     image: woodpeckerci/plugin-docker-buildx
     settings:
-      repo: 192.168.1.76:5000/taskrail
+      repo: 192.168.60.55:5000/taskrail
       dry_run: false
       dockerfile: Dockerfile
       tags:
@@ -150,9 +150,9 @@ steps:
 
   deploy_main:
     image: ruby:3.3.11
+    # Deploy credentials are managed as Woodpecker repository secrets.
     environment:
-      BASE_URL:
-        from_secret: production_base_url
+      BASE_URL: https://taskrail.paracosmlab.com
       KAMAL_REGISTRY_PASSWORD:
         from_secret: kamal_registry_password
       KAMAL_SSH_KEY:

@@ -383,7 +383,9 @@ module Engine
     end
 
     def review_regression_target
-      # Regression from review means the code needs rework — go back to the first stage
+      # Regression from review means the code needs rework — go back to the first stage.
+      # Note: regressing to previous stage (e.g. await_ci) is wrong for async pipelines
+      # like postrunner-fix where the previous stage is a blocking poll stage.
       @work_item.work_queue.stages.first
     end
 

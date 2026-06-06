@@ -44,7 +44,11 @@ RSpec.describe Adapters::GithubCiPollAdapter do
     it "returns :running when checks are pending" do
       allow(adapter).to receive(:run_command).and_return(
         Adapters::Concerns::GithubCli::CommandResult.new(
-          stdout: '[{"name":"test","state":"IN_PROGRESS","conclusion":""}]',
+          stdout: '{"headRefOid":"abc123"}',
+          stderr: "", exit_status: 0, duration_ms: 100
+        ),
+        Adapters::Concerns::GithubCli::CommandResult.new(
+          stdout: '{"workflow_runs":[{"name":"test","status":"in_progress","conclusion":null}]}',
           stderr: "", exit_status: 0, duration_ms: 100
         )
       )
@@ -55,7 +59,11 @@ RSpec.describe Adapters::GithubCiPollAdapter do
     it "returns success AgentResult when all checks pass" do
       allow(adapter).to receive(:run_command).and_return(
         Adapters::Concerns::GithubCli::CommandResult.new(
-          stdout: '[{"name":"test","state":"COMPLETED","conclusion":"SUCCESS"}]',
+          stdout: '{"headRefOid":"abc123"}',
+          stderr: "", exit_status: 0, duration_ms: 100
+        ),
+        Adapters::Concerns::GithubCli::CommandResult.new(
+          stdout: '{"workflow_runs":[{"name":"test","status":"completed","conclusion":"success"}]}',
           stderr: "", exit_status: 0, duration_ms: 100
         )
       )
@@ -68,7 +76,11 @@ RSpec.describe Adapters::GithubCiPollAdapter do
     it "returns failure AgentResult when a check fails" do
       allow(adapter).to receive(:run_command).and_return(
         Adapters::Concerns::GithubCli::CommandResult.new(
-          stdout: '[{"name":"test","state":"COMPLETED","conclusion":"FAILURE"}]',
+          stdout: '{"headRefOid":"abc123"}',
+          stderr: "", exit_status: 0, duration_ms: 100
+        ),
+        Adapters::Concerns::GithubCli::CommandResult.new(
+          stdout: '{"workflow_runs":[{"name":"test","status":"completed","conclusion":"failure"}]}',
           stderr: "", exit_status: 0, duration_ms: 100
         )
       )
