@@ -384,9 +384,9 @@ module Engine
 
     def review_regression_target
       stages = @work_item.work_queue.stages
-      current_index = stages.index(@work_item.stage_name)
+      current_index = stages.index(@work_item.stage_name).to_i
       # Regress to the stage before review, or the first stage if review is first
-      (current_index&.> 0 ? stages[current_index - 1] : nil) || stages.first
+      (current_index > 0 ? stages[current_index - 1] : nil) || stages.first
     end
 
     def block_regression_exhausted
