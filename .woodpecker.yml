@@ -130,6 +130,8 @@ steps:
       dry_run: true
       dockerfile: Dockerfile
       insecure: true
+      labels:
+        - service=taskrail
       buildkit_config: |
         [registry."192.168.60.55:5000"]
           http = true
@@ -147,6 +149,8 @@ steps:
       dry_run: false
       dockerfile: Dockerfile
       insecure: true
+      labels:
+        - service=taskrail
       output: type=image,push=true,registry.insecure=true,rewrite-timestamp=true
       buildkit_config: |
         [registry."192.168.60.55:5000"]
