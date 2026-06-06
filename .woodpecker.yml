@@ -177,7 +177,7 @@ steps:
       - mkdir -p ~/.ssh
       - printf "%s" "$KAMAL_SSH_KEY" > ~/.ssh/id_ed25519
       - chmod 600 ~/.ssh/id_ed25519
-      - bin/kamal deploy
+      - bin/kamal deploy --skip-push --version "$CI_COMMIT_SHA"
       - BASE_URL="$BASE_URL" bin/monitor-prod
     depends_on:
       - docker_build_main
