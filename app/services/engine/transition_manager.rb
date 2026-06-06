@@ -364,9 +364,10 @@ module Engine
       from_stage = @work_item.stage_name
       feedback = review_feedback
       next_regression_count = @work_item.regression_count + 1
+      target_stage = review_regression_target
 
       @work_item.update!(
-        stage_name: "build",
+        stage_name: target_stage,
         status: :pending,
         retry_count: 0,
         regression_count: next_regression_count,
@@ -375,10 +376,17 @@ module Engine
 
       @work_item.transition_logs.create!(
         from_stage: from_stage,
-        to_stage: "build",
+        to_stage: target_stage,
         trigger: "regression",
         details: { feedback: feedback, regression_count: next_regression_count }
       )
+    end
+
+    def review_regression_target
+      stages = @work_item.work_queue.stages
+      current_index = stages.index(@work_item.stage_name)
+      # Regress to the stage before review, or the first stage if review is first
+      (current_index&.> 0 ? stages[current_index - 1] : nil) || stages.first
     end
 
     def block_regression_exhausted
