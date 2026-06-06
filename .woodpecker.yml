@@ -192,7 +192,7 @@ steps:
       - apt-get update -qq
       - apt-get install --no-install-recommends -y build-essential git openssh-client curl
       - bundle install --jobs 4 --retry 3
-      - test "${#RAILS_MASTER_KEY}" -eq 32
+      - ruby -e 'abort "RAILS_MASTER_KEY must be 32 bytes" unless ENV.fetch("RAILS_MASTER_KEY").bytesize == 32'
       - mkdir -p ~/.ssh
       - printf "%s" "$KAMAL_SSH_KEY" > ~/.ssh/id_ed25519
       - chmod 600 ~/.ssh/id_ed25519
