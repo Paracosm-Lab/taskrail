@@ -137,8 +137,8 @@ Branch names are extracted from the Kilo output using the same strategy as Codex
 | `app/adapters/adapters/kilo_adapter.rb` | Create |
 | `app/services/kilo_cli_submitter.rb` | Create |
 | `app/services/engine/claim_executor.rb` | Modify (add ADAPTERS entry) |
-| `test/adapters/kilo_adapter_test.rb` | Create |
-| `test/services/engine/kilo_cli_submitter_test.rb` | Create |
+| `spec/adapters/adapters/kilo_adapter_spec.rb` | Create |
+| `spec/services/kilo_cli_submitter_spec.rb` | Create |
 
 ### Testing
 
