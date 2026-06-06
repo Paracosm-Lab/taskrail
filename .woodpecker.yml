@@ -150,6 +150,7 @@ steps:
 
   deploy_main:
     image: ruby:3.3.11
+    # Deploy credentials are managed as Woodpecker repository secrets.
     environment:
       BASE_URL: https://taskrail.paracosmlab.com
       KAMAL_REGISTRY_PASSWORD:
