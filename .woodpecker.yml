@@ -151,8 +151,7 @@ steps:
   deploy_main:
     image: ruby:3.3.11
     environment:
-      BASE_URL:
-        from_secret: production_base_url
+      BASE_URL: https://taskrail.paracosmlab.com
       KAMAL_REGISTRY_PASSWORD:
         from_secret: kamal_registry_password
       KAMAL_SSH_KEY:
