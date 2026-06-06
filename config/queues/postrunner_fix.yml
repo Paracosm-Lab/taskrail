@@ -26,6 +26,17 @@ stage_configs:
     forbidden_skills: []
     completion_criteria:
       - branch_created
+    adapter_config:
+      command: codex
+      args:
+        - exec
+        - --json
+        - --model
+        - gpt-5.3-codex-spark
+        - --skip-git-repo-check
+        - --dangerously-bypass-approvals-and-sandbox
+      output_artifact_kind: branch
+      branch_prefix: postrunner/
     agent_prompt: |
       You are fixing a CI tool finding. Your assignment context is included below. Find the
       `repository` value in the work item tags — it identifies the GitHub repository to fix
@@ -48,15 +59,6 @@ stage_configs:
       ```json
       {"artifacts": [{"kind": "branch", "data": {"name": "<branch-name-you-pushed>"}}]}
       ```
-    adapter_config:
-      command: codex
-      args:
-        - exec
-        - --json
-        - --skip-git-repo-check
-        - --dangerously-bypass-approvals-and-sandbox
-      output_artifact_kind: branch
-      branch_prefix: postrunner/
 
   open_pr:
     adapter_type: github_pr_create
@@ -111,6 +113,8 @@ stage_configs:
       args:
         - exec
         - --json
+        - --model
+        - gpt-5.3-codex-spark
         - --skip-git-repo-check
         - --dangerously-bypass-approvals-and-sandbox
       output_artifact_kind: review_report
