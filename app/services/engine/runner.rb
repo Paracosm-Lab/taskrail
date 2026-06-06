@@ -46,7 +46,7 @@ module Engine
       result = ClaimExecutor.new(claim:, stage_config:).call
       TransitionManager.new(work_item:, claim:, stage_config:).call unless result.is_a?(Engine::AsyncAdapterResult)
     rescue StandardError, SecurityError => e
-      Rails.logger.error("Engine::Runner failed for WorkItem##{work_item.id}: #{e.class}: #{e.message}")
+      Rails.logger.error("Engine::Runner failed for WorkItem##{work_item.id}: #{e.class}: #{e.message}\n#{e.backtrace.first(10).join("\n")}")
       claim.update!(
         status: :failed,
         completed_at: Time.current,
