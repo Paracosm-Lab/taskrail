@@ -130,6 +130,10 @@ steps:
       dry_run: true
       dockerfile: Dockerfile
       insecure: true
+      buildkit_config: |
+        [registry."192.168.60.55:5000"]
+          http = true
+          insecure = true
     depends_on:
       - test
     when:
@@ -143,6 +147,10 @@ steps:
       dry_run: false
       dockerfile: Dockerfile
       insecure: true
+      buildkit_config: |
+        [registry."192.168.60.55:5000"]
+          http = true
+          insecure = true
       tags:
         - latest
         - ${CI_COMMIT_SHA}
