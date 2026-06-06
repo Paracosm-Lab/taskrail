@@ -23,9 +23,16 @@ module Engine
 
     def next_claim_context(excluded_ids:)
       WorkItem.transaction do
-        scope = WorkItem.lock.pending.order(:created_at)
+        # FOR UPDATE SKIP LOCKED: each engine tick atomically claims the first
+        # available item, skipping any rows already locked by a concurrent tick.
+        # The NOT EXISTS clause excludes items that already have an active claim.
+        scope = WorkItem
+          .pending
+          .lock("FOR UPDATE SKIP LOCKED")
+          .order(:created_at)
+          .where("NOT EXISTS (SELECT 1 FROM claims WHERE claims.work_item_id = work_items.id AND claims.status = ?)", Claim.statuses[:active])
         scope = scope.where.not(id: excluded_ids) if excluded_ids.any?
-        work_item = scope.detect { |candidate| candidate.claims.active.none? }
+        work_item = scope.first
         next unless work_item
 
         match = AgentMatcher.new(work_item: work_item).call

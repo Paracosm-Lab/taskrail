@@ -1,20 +1,20 @@
 require "rails_helper"
 require "tmpdir"
 
-def build_claim(stage_name: "test", working_directory: nil)
-  queue = WorkQueue.create!(name: "Development #{SecureRandom.hex(4)}", slug: "development-#{SecureRandom.hex(4)}", stages: %w[build test review done])
-  work_item = WorkItem.create!(title: "Test item", spec_url: "opaque spec", work_queue: queue, stage_name: stage_name)
-  assignment = {
-    "stage_config" => {
-      "adapter_config" => {}
-    }
-  }
-  assignment["stage_config"]["adapter_config"]["working_directory"] = working_directory if working_directory
-
-  Claim.create!(work_item: work_item, agent_type: "fake", status: :active, assignment: assignment)
-end
-
 RSpec.describe Engine::Predicates::BranchCreated do
+  def build_claim(stage_name: "test", working_directory: nil)
+    queue = WorkQueue.create!(name: "Development #{SecureRandom.hex(4)}", slug: "development-#{SecureRandom.hex(4)}", stages: %w[build test review done])
+    work_item = WorkItem.create!(title: "Test item", spec_url: "opaque spec", work_queue: queue, stage_name: stage_name)
+    assignment = {
+      "stage_config" => {
+        "adapter_config" => {}
+      }
+    }
+    assignment["stage_config"]["adapter_config"]["working_directory"] = working_directory if working_directory
+
+    Claim.create!(work_item: work_item, agent_type: "fake", status: :active, assignment: assignment)
+  end
+
   it "passes when a branch artifact has a name and no workspace is configured" do
     claim = build_claim(stage_name: "build")
     artifact = Artifact.create!(claim: claim, work_item: claim.work_item, kind: "branch", data: { "name" => "sc/test" })

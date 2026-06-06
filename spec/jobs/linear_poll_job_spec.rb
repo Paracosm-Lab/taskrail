@@ -57,6 +57,21 @@ RSpec.describe LinearPollJob, type: :job do
     expect { described_class.perform_now }.not_to change(WorkItem, :count)
   end
 
+  it "skips voice-agent-service because postrunner does not target retired services" do
+    client = instance_double(LinearClient)
+    allow(LinearClient).to receive(:new).and_return(client)
+    allow(client).to receive(:postrunner_issues).and_return([
+      {
+        "id" => "linear-uuid-3", "identifier" => "ENG-175",
+        "title" => "[bandit] B601 in voice_agent/handler.py",
+        "description" => "## Finding\n...",
+        "labels" => { "nodes" => [{ "name" => "postrunner" }, { "name" => "voice-agent-service" }] }
+      }
+    ])
+
+    expect { described_class.perform_now }.not_to change(WorkItem, :count)
+  end
+
   it "skips issues with postrunner-ignore label" do
     client = instance_double(LinearClient)
     allow(LinearClient).to receive(:new).and_return(client)

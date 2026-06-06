@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "review regression" do
-  it "moves review failures back to build with feedback" do
+  it "moves review failures back to the previous stage with feedback" do
     queue = WorkQueue.create!(name: "Development", slug: "development-#{SecureRandom.hex(4)}", stages: %w[build test review done], config: { "max_regression_loops" => 3 })
     stage_config = StageConfig.create!(work_queue: queue, stage_name: "review", completion_criteria: ["review_verdict"])
     work_item = WorkItem.create!(work_queue: queue, title: "Review thing", spec_url: "opaque spec", stage_name: "review", retry_count: 1, regression_count: 0, status: :claimed)
@@ -10,7 +10,7 @@ RSpec.describe "review regression" do
 
     Engine::TransitionManager.new(work_item: work_item, claim: claim, stage_config: stage_config).call
 
-    expect(work_item.reload.stage_name).to eq("build")
+    expect(work_item.reload.stage_name).to eq("test")
     expect(work_item).to be_pending
     expect(work_item.retry_count).to eq(0)
     expect(work_item.regression_count).to eq(1)

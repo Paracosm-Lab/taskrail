@@ -1,7 +1,11 @@
 import type { CostSummary, DashboardState, DigestSummary, QueueSummary, Stage, WorkItem } from './types.js';
 
 export class ApiClient {
-  constructor(private readonly baseUrl: string) {}
+  constructor(private readonly baseUrl: string, private readonly token?: string) {}
+
+  private get authHeaders(): Record<string, string> {
+    return this.token ? { Authorization: `Bearer ${this.token}` } : {};
+  }
 
   async queues(): Promise<QueueSummary[]> {
     const payload = await this.getJson<{ queues?: QueueSummary[] }>('/api/v1/queues');
@@ -56,7 +60,7 @@ export class ApiClient {
         const query = queueSlug ? `?${new URLSearchParams({ queue: queueSlug }).toString()}` : '';
         const response = await fetch(new URL(`/api/v1/stream${query}`, this.baseUrl), {
           method: 'GET',
-          headers: { Accept: 'text/event-stream' },
+          headers: { Accept: 'text/event-stream', ...this.authHeaders },
           signal: abortController.signal
         });
         if (!response.ok) {
@@ -97,9 +101,10 @@ export class ApiClient {
   }
 
   private async requestJson<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
+    const contentHeaders: Record<string, string> = body === undefined ? {} : { 'Content-Type': 'application/json' };
     const response = await fetch(new URL(path, this.baseUrl), {
       method,
-      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      headers: { ...contentHeaders, ...this.authHeaders },
       body: body === undefined ? undefined : JSON.stringify(body)
     });
     if (!response.ok) {

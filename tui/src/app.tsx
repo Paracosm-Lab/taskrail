@@ -12,13 +12,14 @@ import { stageIndex } from './render-utils.js';
 
 interface AppProps {
   apiUrl: string;
+  token?: string;
   queue?: string;
   refreshSeconds: number;
 }
 
-export function App({ apiUrl, queue, refreshSeconds }: AppProps) {
+export function App({ apiUrl, token, queue, refreshSeconds }: AppProps) {
   const { exit } = useApp();
-  const client = useMemo(() => new ApiClient(apiUrl), [apiUrl]);
+  const client = useMemo(() => new ApiClient(apiUrl, token), [apiUrl, token]);
   const [selectedQueue, setSelectedQueue] = useState<string | undefined>(queue);
   const [queues, setQueues] = useState<string[]>([]);
   const [state, setState] = useState<DashboardState | undefined>();

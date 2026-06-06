@@ -5,6 +5,7 @@ import { App } from './app.js';
 
 interface Options {
   apiUrl: string;
+  token?: string;
   queue?: string;
   refreshSeconds: number;
 }
@@ -18,10 +19,11 @@ function parseArgs(argv: string[]): Options {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--api') options.apiUrl = requireValue(argv, ++index, '--api');
+    else if (arg === '--token') options.token = requireValue(argv, ++index, '--token');
     else if (arg === '--queue') options.queue = requireValue(argv, ++index, '--queue');
     else if (arg === '--refresh') options.refreshSeconds = Number(requireValue(argv, ++index, '--refresh'));
     else if (arg === '--help' || arg === '-h') {
-      console.log('Usage: taskrail-tui [--api URL] [--queue SLUG] [--refresh SECONDS]');
+      console.log('Usage: taskrail-tui [--api URL] [--token TOKEN] [--queue SLUG] [--refresh SECONDS]');
       process.exit(0);
     } else {
       throw new Error(`unknown option: ${arg}`);
@@ -43,7 +45,7 @@ function requireValue(argv: string[], index: number, option: string): string {
 
 try {
   const options = parseArgs(process.argv.slice(2));
-  render(<App apiUrl={options.apiUrl} queue={options.queue} refreshSeconds={options.refreshSeconds} />);
+  render(<App apiUrl={options.apiUrl} token={options.token} queue={options.queue} refreshSeconds={options.refreshSeconds} />);
 } catch (err) {
   console.error(err instanceof Error ? err.message : String(err));
   process.exit(1);

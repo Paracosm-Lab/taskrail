@@ -2,16 +2,23 @@
 service: taskrail
 
 # Name of the container image.
-image: <%= ENV.fetch("KAMAL_IMAGE", "192.168.1.76:5000/taskrail") %>
+image: <%= ENV.fetch("KAMAL_IMAGE", "taskrail") %>
 
 # Deploy to these servers.
 servers:
   web:
-    - <%= ENV.fetch("KAMAL_WEB_HOST", "192.168.1.76") %>
-  # job:
-  #   hosts:
-  #     - 192.168.0.1
-  #   cmd: bin/jobs
+    hosts:
+      - <%= ENV.fetch("KAMAL_WEB_HOST", "192.168.60.55") %>
+    options:
+      volume:
+        - "/home/gregmushen/.codex:/home/rails/.codex"
+  job:
+    hosts:
+      - <%= ENV.fetch("KAMAL_JOB_HOST", "192.168.60.55") %>
+    cmd: bin/jobs
+    options:
+      volume:
+        - "/home/gregmushen/.codex:/home/rails/.codex"
 
 # Enable SSL auto certification via Let's Encrypt and allow for multiple apps on a single web server.
 # Remove this section when using multiple web servers and ensure you terminate SSL at your load balancer.
@@ -32,7 +39,7 @@ proxy:
 registry:
   # Specify the registry server, if you're not using Docker Hub
   # server: registry.digitalocean.com / ghcr.io / ...
-  server: <%= ENV.fetch("KAMAL_REGISTRY_SERVER", "http://192.168.1.76:5000") %>
+  server: <%= ENV.fetch("KAMAL_REGISTRY_SERVER", "192.168.60.55:5000") %>
   username: <%= ENV.fetch("KAMAL_REGISTRY_USERNAME", "taskrail") %>
 
   # Always use an access token rather than real password when possible.
@@ -47,21 +54,20 @@ env:
     - TASKRAIL_SERVICE_TOKEN
     - TASKRAIL_ADMIN_TOKEN
     - GITHUB_WEBHOOK_SECRET
+    - GH_TOKEN
+    - LINEAR_API_KEY
+    - OPENAI_API_KEY
   clear:
-    # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
-    # When you start using multiple servers, you should split out job processing to a dedicated machine.
-    SOLID_QUEUE_IN_PUMA: true
-
     # Set number of processes dedicated to Solid Queue (default: 1)
     # JOB_CONCURRENCY: 3
 
     # Set number of cores available to the application on each server (default: 1).
     # WEB_CONCURRENCY: 2
 
-    POSTGRES_HOST: 192.168.1.76
+    POSTGRES_HOST: 192.168.60.55
     POSTGRES_PORT: 55432
-    POSTGRES_DB: <%= ENV.fetch("POSTGRES_DB") %>
-    POSTGRES_USER: <%= ENV.fetch("POSTGRES_USER") %>
+    POSTGRES_DB: taskrail
+    POSTGRES_USER: taskrail
 
     # Log everything from Rails
     # RAILS_LOG_LEVEL: debug
@@ -81,6 +87,7 @@ aliases:
 # Configure the image builder.
 builder:
   arch: amd64
+  remote: ssh://gregmushen@192.168.60.55
 
   # # Build image via remote server (useful for faster amd64 builds on arm64 computers)
   # remote: ssh://docker@docker-builder-server

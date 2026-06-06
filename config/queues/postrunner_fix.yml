@@ -27,15 +27,34 @@ stage_configs:
     completion_criteria:
       - branch_created
     agent_prompt: |
-      You are fixing a CI tool finding. The issue details are in the spec below.
-      Clone the repository, read the flagged file, apply the fix, commit to a new branch.
-      Branch name format: postrunner/{tool}-{short-description}
-      Make the minimal change needed — do not refactor surrounding code.
+      You are fixing a CI tool finding. Your assignment context is included below. Find the
+      `repository` value in the work item tags — it identifies the GitHub repository to fix
+      (format: "org/repo").
+
+      Steps:
+      1. Configure git to use the GitHub token for authentication (required for push):
+         git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+      2. Clone the repository into /tmp/fix-work: git clone https://github.com/<repository> /tmp/fix-work && cd /tmp/fix-work
+         (replace <repository> with the value from your context)
+      3. Create a new branch before making any changes:
+         git checkout -b postrunner/<tool>-<short-slug>
+         (derive tool and short-slug from the finding details in your context)
+      4. Read the spec below carefully — it identifies the tool, rule, file, and line.
+      5. Apply the minimal fix. Do not refactor surrounding code.
+      6. Commit: git commit -am "fix: <short description>"
+      7. Push the branch to origin: git push origin HEAD
+      8. In your FINAL response, output ONLY this JSON (fill in the branch name):
+
+      ```json
+      {"artifacts": [{"kind": "branch", "data": {"name": "<branch-name-you-pushed>"}}]}
+      ```
     adapter_config:
       command: codex
       args:
         - exec
         - --json
+        - --skip-git-repo-check
+        - --dangerously-bypass-approvals-and-sandbox
       output_artifact_kind: branch
       branch_prefix: postrunner/
 
@@ -63,7 +82,7 @@ stage_configs:
       timeout_seconds: 900
 
   review:
-    adapter_type: inline_claude
+    adapter_type: codex
     max_retries: 0
     timeout_seconds: 120
     escalation_target: block_and_notify
@@ -72,18 +91,28 @@ stage_configs:
     completion_criteria:
       - review_verdict
     agent_prompt: |
-      You are reviewing a pull request that fixes a CI tool finding.
-      Read the diff carefully. Verify:
-      1. The fix addresses the specific finding (tool, rule, file from the spec)
-      2. The change is minimal and doesn't introduce new issues
-      3. No unrelated changes were made
-      If the fix is correct, respond with: {"verdict": "approved"}
-      If the fix is wrong or incomplete, respond with: {"verdict": "request_changes", "feedback": "explanation"}
+      You are reviewing a pull request that fixes a CI tool finding. Your assignment context is
+      included below. Find the `pull_request` artifact in the `upstream_artifacts` array under
+      Context — it contains the PR number and repository.
+
+      First, fetch the diff using those values:
+        gh pr diff <pr_number> --repo <repository>
+
+      Then verify:
+      1. The fix addresses the specific finding (tool, rule, file, line from the spec)
+      2. The change is minimal — no unrelated modifications
+      3. No new issues introduced
+
+      In your FINAL response, output ONLY one of these JSON blocks:
+        {"verdict": "approved"}
+        {"verdict": "request_changes", "feedback": "<concise explanation>"}
     adapter_config:
-      command: claude
+      command: codex
       args:
-        - --print
-      model: claude-opus-4-6
+        - exec
+        - --json
+        - --skip-git-repo-check
+        - --dangerously-bypass-approvals-and-sandbox
       output_artifact_kind: review_report
 
   merge:

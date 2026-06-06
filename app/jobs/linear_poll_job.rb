@@ -1,7 +1,8 @@
 class LinearPollJob < ApplicationJob
   queue_as :default
 
-  SERVICE_LABELS = %w[crm-service user-service chat-service memory-service enrichment-service notification-service agent-service].freeze
+  SERVICE_LABELS = %w[crm-service user-service chat-service memory-service enrichment-service notification-service agent-service ops-service frontend-dashboard frontend-dashboard-native scribbl-infrastructure v0-scribbl-homepage scribbl-local-dev scribbl-scaffold].freeze
+  EXCLUDED_SERVICES = %w[voice-agent-service].freeze
 
   def perform
     client = LinearClient.new(api_key: ENV.fetch("LINEAR_API_KEY", ""))
@@ -14,8 +15,10 @@ class LinearPollJob < ApplicationJob
 
       labels = issue.dig("labels", "nodes")&.map { |l| l["name"] } || []
       next if labels.include?("postrunner-ignore")
+      next if (labels & EXCLUDED_SERVICES).any?
 
       service = (labels & SERVICE_LABELS).first || "unknown-service"
+
       repo = "MyScribbl/#{service}"
       linear_url = "https://linear.app/myscribbl/issue/#{issue['identifier']}"
 

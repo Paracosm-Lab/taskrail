@@ -66,6 +66,7 @@ module Engine
 
         spawn_cross_queue_items!(from_stage: from_stage)
         PipeEvaluator.call(work_item: @work_item, from_stage: from_stage)
+        close_linear_issue if terminal
       end
     end
 
@@ -363,9 +364,10 @@ module Engine
       from_stage = @work_item.stage_name
       feedback = review_feedback
       next_regression_count = @work_item.regression_count + 1
+      target_stage = review_regression_target
 
       @work_item.update!(
-        stage_name: "build",
+        stage_name: target_stage,
         status: :pending,
         retry_count: 0,
         regression_count: next_regression_count,
@@ -374,10 +376,17 @@ module Engine
 
       @work_item.transition_logs.create!(
         from_stage: from_stage,
-        to_stage: "build",
+        to_stage: target_stage,
         trigger: "regression",
         details: { feedback: feedback, regression_count: next_regression_count }
       )
+    end
+
+    def review_regression_target
+      stages = @work_item.work_queue.stages
+      current_index = stages.index(@work_item.stage_name)
+      # Regress to the stage before review, or the first stage if review is first
+      current_index && current_index > 0 ? stages[current_index - 1] : stages.first
     end
 
     def block_regression_exhausted
@@ -411,6 +420,17 @@ module Engine
 
     def pipe_depth(work_item)
       Engine::PipeDepth.for(work_item)
+    end
+
+    def close_linear_issue
+      issue_id = @work_item.tags["linear_issue_id"]
+      return unless issue_id.present?
+
+      client = LinearClient.new(api_key: ENV.fetch("LINEAR_API_KEY", ""))
+      success = client.close_issue(issue_id)
+      Rails.logger.info("[TransitionManager] Linear issue #{issue_id} closed: #{success}")
+    rescue StandardError => e
+      Rails.logger.error("[TransitionManager] Failed to close Linear issue: #{e.message}")
     end
   end
 end

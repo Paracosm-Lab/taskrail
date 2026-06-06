@@ -12,6 +12,9 @@ class WorkItem < ApplicationRecord
 
   enum :status, { pending: 0, claimed: 1, blocked: 2, waiting: 3, completed: 4, cancelled: 5 }
 
+  scope :active, -> { where(status: [ :pending, :claimed, :blocked, :waiting ]) }
+  scope :terminal, -> { where(status: [ :completed, :cancelled ]) }
+
   validates :title, :spec_url, :stage_name, presence: true
 
   def spec_inline

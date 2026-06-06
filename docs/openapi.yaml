@@ -1,0 +1,633 @@
+openapi: "3.1.0"
+
+info:
+  title: TaskRail API
+  version: "1"
+  description: |
+    Queue-driven AI workflow control plane. All endpoints require a Bearer token
+    issued by `POST /personal_access_tokens` or the legacy `TASKRAIL_SERVICE_TOKEN`
+    environment variable.
+
+    Base path: `/api/v1`
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local development
+  - url: https://taskrail.paracosmlab.com/api/v1
+    description: Production
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer
+      required: [page, per_page, total, total_pages]
+
+    WorkItemStatus:
+      type: string
+      enum: [pending, claimed, blocked, waiting, completed, cancelled]
+
+    ActiveClaim:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+          format: uuid
+        agent_type:
+          type: string
+        status:
+          type: string
+          enum: [active, completed, failed, timed_out]
+        async_execution:
+          type: boolean
+        external_id:
+          type: string
+          nullable: true
+        last_heartbeat_at:
+          type: string
+          format: date-time
+          nullable: true
+        heartbeat_message:
+          type: string
+          nullable: true
+        heartbeat_stale:
+          type: boolean
+
+    Escalation:
+      type: object
+      nullable: true
+      properties:
+        target:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        question:
+          type: string
+          nullable: true
+        human_action_required:
+          type: boolean
+
+    WorkItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        spec_url:
+          type: string
+        queue:
+          type: string
+          description: Queue slug
+        stage_name:
+          type: string
+        status:
+          $ref: "#/components/schemas/WorkItemStatus"
+        tags:
+          type: object
+          additionalProperties:
+            type: string
+        metadata:
+          type: object
+        retry_count:
+          type: integer
+        regression_count:
+          type: integer
+        active_claim:
+          $ref: "#/components/schemas/ActiveClaim"
+        escalation:
+          $ref: "#/components/schemas/Escalation"
+      required: [id, title, spec_url, queue, stage_name, status, tags, metadata,
+                 retry_count, regression_count, active_claim, escalation]
+
+    QueueSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        stages:
+          type: array
+          items:
+            type: string
+      required: [id, name, slug, stages]
+
+    Stage:
+      type: object
+      properties:
+        name:
+          type: string
+        adapter_type:
+          type: string
+        completion_criteria:
+          type: array
+          items:
+            type: string
+      required: [name, adapter_type, completion_criteria]
+
+    Pipe:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        from_queue:
+          type: string
+        from_stage:
+          type: string
+        to_queue:
+          type: string
+        to_stage:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+        conditions:
+          type: object
+        transforms:
+          type: object
+        limits:
+          type: object
+      required: [id, name, slug, from_queue, from_stage, to_queue, enabled]
+
+    CostSummary:
+      type: object
+      properties:
+        total_tokens_in:
+          type: integer
+        total_tokens_out:
+          type: integer
+        total_cost_cents:
+          type: integer
+        total_duration_ms:
+          type: integer
+      required: [total_tokens_in, total_tokens_out, total_cost_cents, total_duration_ms]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+paths:
+  /queues:
+    get:
+      operationId: listQueues
+      summary: List all queues
+      tags: [Queues]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  queues:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/QueueSummary"
+                required: [queues]
+
+  /queues/{slug}/stages:
+    get:
+      operationId: getQueueStages
+      summary: Stages for a queue
+      tags: [Queues]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  queue:
+                    $ref: "#/components/schemas/QueueSummary"
+                  stages:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Stage"
+        "404":
+          description: Queue not found
+
+  /work_items:
+    get:
+      operationId: listWorkItems
+      summary: List work items
+      tags: [Work Items]
+      parameters:
+        - name: queue
+          in: query
+          schema:
+            type: string
+          description: Filter by queue slug
+        - name: stage
+          in: query
+          schema:
+            type: string
+          description: Filter by stage name
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/WorkItemStatus"
+        - name: tags
+          in: query
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+          style: deepObject
+          description: Filter by tag key/value pairs
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  work_items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/WorkItem"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+                required: [work_items, meta]
+        "400":
+          description: Invalid status value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: createWorkItem
+      summary: Create a work item
+      tags: [Work Items]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                queue:
+                  type: string
+                  description: Queue slug
+                title:
+                  type: string
+                spec_url:
+                  type: string
+                  description: URL or path to the spec document (max 2 KB)
+                stage_name:
+                  type: string
+                  description: Starting stage; defaults to first stage of the queue
+                tags:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: Arbitrary string key/value tags (values max 256 chars)
+              required: [queue, title, spec_url]
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkItem"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /work_items/{id}:
+    get:
+      operationId: getWorkItem
+      summary: Get a work item
+      tags: [Work Items]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: traces
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include trace events in response
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkItem"
+        "404":
+          description: Not found
+
+  /work_items/{id}/answer:
+    post:
+      operationId: answerWorkItem
+      summary: Provide a human answer to a blocked work item
+      tags: [Work Items]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answer:
+                  type: string
+                  description: Human answer to the escalated question (max 64 KB)
+              required: [answer]
+      responses:
+        "200":
+          description: Item returned to pending
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkItem"
+        "422":
+          description: Answer too long
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /work_items/{id}/retry:
+    post:
+      operationId: retryWorkItem
+      summary: Retry a failed or blocked work item
+      tags: [Work Items]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Item returned to pending
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkItem"
+
+  /work_items/{id}/cancel:
+    post:
+      operationId: cancelWorkItem
+      summary: Cancel a work item
+      tags: [Work Items]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Item cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkItem"
+
+  /pipes:
+    get:
+      operationId: listPipes
+      summary: List all pipes
+      tags: [Pipes]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pipes:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Pipe"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+                required: [pipes, meta]
+
+  /pipes/{slug}:
+    get:
+      operationId: getPipe
+      summary: Get a pipe
+      tags: [Pipes]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pipe"
+        "404":
+          description: Not found
+
+  /costs:
+    get:
+      operationId: getCosts
+      summary: Aggregate token cost summary
+      tags: [Costs]
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [today]
+          description: Omit for all-time; pass `today` for today's costs
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CostSummary"
+
+  /costs/work_items/{id}:
+    get:
+      operationId: getWorkItemCosts
+      summary: Cost summary for a single work item
+      tags: [Costs]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CostSummary"
+        "404":
+          description: Not found
+
+  /digest:
+    get:
+      operationId: getDigest
+      summary: Operational digest summary
+      description: |
+        Human-readable operational summary. The `since` window is parsed by
+        `Engine::TimeWindowParser`. Examples: `24h`, `7d`, `2026-01-01`.
+      tags: [Digest]
+      parameters:
+        - name: since
+          in: query
+          schema:
+            type: string
+            default: 24h
+          description: Time window (e.g. `24h`, `7d`)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /stream:
+    get:
+      operationId: streamDashboard
+      summary: Server-sent events dashboard stream
+      description: |
+        Emits a `dashboard` SSE event approximately every 2 seconds. Each event
+        carries a full dashboard snapshot. Reconnect automatically on drop.
+      tags: [Stream]
+      parameters:
+        - name: queue
+          in: query
+          schema:
+            type: string
+          description: Filter stream to a single queue slug
+      responses:
+        "200":
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /webhooks/github/pull_request:
+    post:
+      operationId: githubPrWebhook
+      summary: GitHub pull request webhook
+      description: |
+        Verifies `X-Hub-Signature-256` against `GITHUB_WEBHOOK_SECRET` (returns 503
+        if the secret is not configured). Supported actions: `opened`, `reopened`,
+        `synchronize`, `ready_for_review`. Creates a `pr_review` work item.
+      tags: [Webhooks]
+      security: []
+      parameters:
+        - name: X-Hub-Signature-256
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: X-GitHub-Event
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [pull_request]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: GitHub pull_request webhook payload
+      responses:
+        "200":
+          description: Accepted (event processed or ignored)
+        "400":
+          description: Invalid signature
+        "503":
+          description: Webhook secret not configured

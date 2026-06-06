@@ -17,3 +17,11 @@ production:
     class: LinearPollJob
     queue: default
     schedule: every 5 minutes
+  engine_tick:
+    class: EngineTickJob
+    queue: default
+    schedule: every minute
+  check_async_claims:
+    class: CheckAsyncClaimsJob
+    queue: default
+    schedule: every minute

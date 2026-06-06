@@ -1186,6 +1186,32 @@ RSpec.describe "development queue seed" do
     expect(serialized_queue).not_to include("/Users/")
   end
 
+  it "seeds the postrunner-fix queue with correct adapter types and model_override" do
+    load Rails.root.join("db/seeds.rb")
+
+    queue = WorkQueue.find_by!(slug: "postrunner-fix")
+    expect(queue.stages).to eq(%w[fix open_pr await_ci review merge done])
+    expect(queue.stage_configs.pluck(:stage_name)).to contain_exactly(*queue.stages)
+
+    fix = queue.stage_configs.find_by!(stage_name: "fix")
+    expect(fix.adapter_type).to eq("codex")
+    expect(fix.completion_criteria).to eq(["branch_created"])
+    expect(fix.agent_prompt).to include("repository")
+    expect(fix.agent_prompt).to include("git checkout -b")
+    expect(fix.agent_prompt).to include("git push origin HEAD")
+    expect(fix.agent_prompt).to include("branch-name-you-pushed")
+
+    review = queue.stage_configs.find_by!(stage_name: "review")
+    expect(review.adapter_type).to eq("codex")
+    expect(review.model_override).to be_nil
+    expect(review.adapter_config).not_to have_key("model")
+    expect(review.completion_criteria).to eq(["review_verdict"])
+    expect(review.agent_prompt).to include("upstream_artifacts")
+    expect(review.agent_prompt).to include("gh pr diff")
+    expect(review.agent_prompt).to include('{"verdict": "approved"}')
+    expect(review.agent_prompt).to include("request_changes")
+  end
+
   it "is idempotent" do
     2.times { load Rails.root.join("db/seeds.rb") }
 
@@ -1399,6 +1425,5 @@ RSpec.describe "development queue seed" do
   end
 
 end
-
 
 

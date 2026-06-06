@@ -29,7 +29,8 @@ module Engine
       return start_async_result(result) if result.is_a?(Engine::AsyncAdapterResult)
 
       persist_result(result)
-      @claim.update!(status: :completed, completed_at: Time.current)
+      claim_status = result.status == "timeout" ? :timed_out : :completed
+      @claim.update!(status: claim_status, completed_at: Time.current)
       result
     rescue UnknownAdapter
       @claim.update!(status: :failed, completed_at: Time.current)

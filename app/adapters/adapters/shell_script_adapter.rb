@@ -61,6 +61,8 @@ module Adapters
 
       if all_passed
         AgentResult.success(report: report, artifacts: artifacts, trace_events: trace_events)
+      elsif command_results.any? { |r| r.fetch("exit_status") == 124 }
+        AgentResult.timeout(report: report, artifacts: artifacts, trace_events: trace_events)
       else
         AgentResult.failure(report: report, artifacts: artifacts, trace_events: trace_events)
       end
