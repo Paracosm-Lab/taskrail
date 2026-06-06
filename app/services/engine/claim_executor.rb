@@ -7,6 +7,7 @@ module Engine
       "shell_script" => Adapters::ShellScriptAdapter,
       "inline_claude" => Adapters::InlineClaudeAdapter,
       "codex" => Adapters::CodexAdapter,
+      "kilo" => Adapters::KiloAdapter,
       "docker_compose" => Adapters::DockerComposeAdapter,
       "github_pr_create" => Adapters::GithubPrCreateAdapter,
       "github_ci_poll" => Adapters::GithubCiPollAdapter,

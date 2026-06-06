@@ -10,6 +10,7 @@ module Adapters
       stage = normalized.fetch("stage")
       config = stage.fetch("adapter_config", {})
       command = config.fetch("command", DEFAULT_COMMAND)
+      # Reuse CodexAssignmentPrompt — prompt format is adapter-agnostic
       prompt = CodexAssignmentPrompt.new(normalized).to_s
 
       args = config.fetch("args", DEFAULT_ARGS).dup
@@ -49,6 +50,12 @@ module Adapters
           trace_events: trace_events
         )
       end
+    rescue Errno::ENOENT
+      AgentResult.failure(
+        report: { "error" => "kilo command not found — is @kilocode/cli installed?" },
+        artifacts: [],
+        trace_events: []
+      )
     end
 
     private
