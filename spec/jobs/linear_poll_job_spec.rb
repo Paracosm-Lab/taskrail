@@ -57,7 +57,7 @@ RSpec.describe LinearPollJob, type: :job do
     expect { described_class.perform_now }.not_to change(WorkItem, :count)
   end
 
-  it "maps voice-agent-service label to the correct repository" do
+  it "skips voice-agent-service because postrunner does not target retired services" do
     client = instance_double(LinearClient)
     allow(LinearClient).to receive(:new).and_return(client)
     allow(client).to receive(:postrunner_issues).and_return([
@@ -69,11 +69,7 @@ RSpec.describe LinearPollJob, type: :job do
       }
     ])
 
-    expect { described_class.perform_now }.to change(WorkItem, :count).by(1)
-
-    item = WorkItem.last
-    expect(item.tags["repository"]).to eq("MyScribbl/voice-agent-service")
-    expect(item.tags["service_name"]).to eq("voice-agent-service")
+    expect { described_class.perform_now }.not_to change(WorkItem, :count)
   end
 
   it "skips issues with postrunner-ignore label" do

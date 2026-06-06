@@ -26,7 +26,8 @@ module Adapters
 
       # Get the PR's head SHA
       sha_result = run_command(["gh", "pr", "view", pr.to_s, "--repo", repo, "--json", "headRefOid"])
-      head_sha = (JSON.parse(sha_result.stdout) rescue {})["headRefOid"]
+      sha_payload = JSON.parse(sha_result.stdout) rescue {}
+      head_sha = sha_payload["headRefOid"] if sha_payload.is_a?(Hash)
       return :running unless head_sha.present?
 
       # Query workflow runs for this SHA via the REST API (works with Actions read PAT permission)

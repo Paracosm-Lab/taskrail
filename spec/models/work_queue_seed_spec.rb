@@ -1199,11 +1199,11 @@ RSpec.describe "development queue seed" do
     expect(fix.agent_prompt).to include("repository")
     expect(fix.agent_prompt).to include("git checkout -b")
     expect(fix.agent_prompt).to include("git push origin HEAD")
-    expect(fix.agent_prompt).to include("branch name you pushed")
+    expect(fix.agent_prompt).to include("branch-name-you-pushed")
 
     review = queue.stage_configs.find_by!(stage_name: "review")
-    expect(review.adapter_type).to eq("inline_claude")
-    expect(review.model_override).to eq("claude-opus-4-6")
+    expect(review.adapter_type).to eq("codex")
+    expect(review.model_override).to be_nil
     expect(review.adapter_config).not_to have_key("model")
     expect(review.completion_criteria).to eq(["review_verdict"])
     expect(review.agent_prompt).to include("upstream_artifacts")
@@ -1425,6 +1425,5 @@ RSpec.describe "development queue seed" do
   end
 
 end
-
 
 
